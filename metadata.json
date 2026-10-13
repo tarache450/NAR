@@ -1,0 +1,7 @@
+{
+  "name": "Obsidian Kinetic",
+  "description": "High-performance executive peer-to-peer mobility, verified campus carpooling, and real-time kinetic telemetry.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
+

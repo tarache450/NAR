@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <!-- Deep Dark Background Squircle -->
+  <rect width="512" height="512" rx="118" fill="#0c1017"/>
+  
+  <!-- Subtle Ambient Glow -->
+  <radialGradient id="logoGlow" cx="50%" cy="50%" r="50%">
+    <stop offset="0%" stop-color="#315cff" stop-opacity="0.18"/>
+    <stop offset="70%" stop-color="#00c29a" stop-opacity="0.06"/>
+    <stop offset="100%" stop-color="#0c1017" stop-opacity="0"/>
+  </radialGradient>
+  <rect width="512" height="512" rx="118" fill="url(#logoGlow)"/>
+
+  <!-- Gradients for the Kinetic Transit Path -->
+  <defs>
+    <linearGradient id="diagonalPath" x1="162" y1="180" x2="350" y2="352" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#2d62ff"/>
+      <stop offset="48%" stop-color="#1ea2dc"/>
+      <stop offset="100%" stop-color="#00be98"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Left Vertical Stem (Electric Royal Blue) -->
+  <line x1="162" y1="346" x2="162" y2="182" stroke="#2563eb" stroke-width="44" stroke-linecap="round"/>
+  <!-- Left Bottom Anchor Node -->
+  <circle cx="162" cy="354" r="28" fill="#2563eb"/>
+  <!-- Left Top Joint Node -->
+  <circle cx="162" cy="180" r="23" fill="#2563eb"/>
+
+  <!-- Right Vertical Stem (Kinetic Emerald/Teal) -->
+  <line x1="350" y1="350" x2="350" y2="166" stroke="#00c29a" stroke-width="44" stroke-linecap="round"/>
+  <!-- Right Bottom Joint Node -->
+  <circle cx="350" cy="350" r="22" fill="#00c29a"/>
+  <!-- Right Top Destination Node (with white center) -->
+  <circle cx="350" cy="166" r="29" fill="#00c29a"/>
+  <circle cx="350" cy="166" r="12" fill="#ffffff"/>
+
+  <!-- Diagonal Transit Route Bridge -->
+  <line x1="162" y1="180" x2="350" y2="350" stroke="url(#diagonalPath)" stroke-width="44" stroke-linecap="round"/>
+
+  <!-- Center Waypoint Node (The Shared Ride Match Point) -->
+  <!-- Outer Pulse Ring -->
+  <circle cx="256" cy="265" r="26" stroke="#ffffff" stroke-width="3" stroke-opacity="0.4" fill="none"/>
+  <!-- Inner White Waypoint -->
+  <circle cx="256" cy="265" r="13" fill="#ffffff"/>
+</svg>
