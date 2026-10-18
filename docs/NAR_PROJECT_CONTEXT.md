@@ -1,5 +1,7 @@
 # NAR — Contexto del Proyecto
 
+> Auditoría histórica del estado anterior al rediseño (`cec47e1`). En la versión actual, el conflicto `esbuild`/Vite descrito como P1 está corregido; `npm ci`, lint y build pasan sin flags. Los hallazgos funcionales deben verificarse contra el código vigente antes de tratarlos como actuales.
+
 **TASK ID:** NAR-DOCS-01 · Fecha: 2026-10-18 · Rama: `maniky/nar-docs-classes`
 Fuente de verdad: inspección directa del código en este worktree (refs `archivo:línea`) + comandos ejecutados. Sin secretos incluidos.
 
@@ -92,7 +94,7 @@ Diseño: tema oscuro con tokens propios (`--color-primary #00c29a`, superficies 
 
 ## 5. Problemas verificables (evidencia, no suposiciones)
 
-### P1 — `npm install` falla tal cual viene el repo (dependencias incompatibles) 🔴
+### P1 — Conflicto de instalación en la versión auditada (resuelto en la versión actual)
 ```
 $ npm install
 npm error code ERESOLVE

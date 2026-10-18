@@ -1,5 +1,7 @@
 # NAR — Roadmap de Rediseño (Contract-First)
 
+> Documento de planificación basado en el estado anterior al rediseño (`cec47e1`). El conflicto de instalación con `esbuild` y la advertencia de `__dirname` ya están resueltos en la versión actual. Las demás propuestas siguen siendo tareas por evaluar, no funcionalidades implementadas.
+
 **TASK ID:** NAR-DOCS-01 · Fecha: 2026-10-18 · Base: `docs/NAR_PROJECT_CONTEXT.md` (problemas P1–P10 referenciados ahí; no se repite la evidencia aquí).
 
 Principio del roadmap: **primero estabilizar y acabar con la mentira (QR/telemetría/chat/SOS fake), después hacer real el dominio (persistencia, auth, matching), y solo entonces escalar (mapa, pagos, tiempo real).** Cada sprint cierra con criterios verificables y una demo.

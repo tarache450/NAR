@@ -1,5 +1,7 @@
 # Clases 4–5 de ORIGO Academy — "Auditar y rediseñar NAR"
 
+> Para reproducir los errores de instalación y build de esta clase, partir del commit de estudio `cec47e1` en un worktree aislado. La versión actual del repositorio ya corrige esos dos problemas.
+
 **TASK ID:** NAR-DOCS-01 · Duración: **120 minutos** (2 sesiones de 60 o un bloque) · Nivel: intermedio · Modalidad: trabajo en worktree aislado por alumno (nunca sobre `main`).
 
 **Proyecto de estudio:** NAR (carpooling para El Salvador) — prototipo React 19 + Vite 8 + Tailwind v4, 100% front-end con datos mock. Base factual de la clase: `docs/NAR_PROJECT_CONTEXT.md` (leerlo ANTES de la clase, profesor y alumnos).

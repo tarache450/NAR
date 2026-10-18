@@ -50,7 +50,7 @@ export const DigitalBoardingPassModal: React.FC<DigitalBoardingPassModalProps> =
             <span>PASE DE ABORDAJE VERIFICADO</span>
           </div>
           <h3 className="font-display font-extrabold text-lg text-white">
-            NAR <span className="text-[#00c29a]">Digital Pass</span>
+            NAR <span className="text-[#9cb3ff]">Digital Pass</span>
           </h3>
           <p className="text-xs text-slate-400">
             Muestra este código al conductor al subirte
@@ -97,7 +97,7 @@ export const DigitalBoardingPassModal: React.FC<DigitalBoardingPassModalProps> =
           </div>
 
           <div className="flex items-center gap-2 mt-4">
-            <span className="font-mono text-xs text-cyan-300 tracking-wider font-bold">
+            <span className="font-mono text-xs text-[#c4cfff] tracking-wider font-bold">
               {passCode}
             </span>
             <button
@@ -124,7 +124,7 @@ export const DigitalBoardingPassModal: React.FC<DigitalBoardingPassModalProps> =
 
           <div className="flex items-center justify-between">
             <span className="text-slate-400">Vehículo & Placa SV</span>
-            <span className="font-mono text-cyan-300">{ride.vehicle.model} · {ride.vehicle.plate}</span>
+            <span className="font-mono text-[#c4cfff]">{ride.vehicle.model} · {ride.vehicle.plate}</span>
           </div>
 
           <div className="flex items-center justify-between">

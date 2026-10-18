@@ -28,7 +28,7 @@ export const RideCard: React.FC<RideCardProps> = ({
   return (
     <article 
       onClick={() => onSelect(ride)}
-      className="group relative bg-[#131722] hover:bg-[#181d2b] border border-white/10 hover:border-cyan-400/40 rounded-3xl p-5 sm:p-6 transition-all duration-300 flex flex-col justify-between shadow-xl shadow-black/40 cursor-pointer"
+      className="group relative bg-[#131722] hover:bg-[#181d2b] border border-white/10 hover:border-[#315cff]/40 rounded-3xl p-5 sm:p-6 transition-all duration-300 flex flex-col justify-between shadow-xl shadow-black/40 cursor-pointer"
     >
       <div>
         
@@ -40,7 +40,7 @@ export const RideCard: React.FC<RideCardProps> = ({
             
             {/* Origin & Departure */}
             <div>
-              <span className="text-base sm:text-lg font-display font-black text-white block">
+              <span className="text-sm sm:text-lg font-display font-black text-white block whitespace-nowrap">
                 {ride.departureTime}
               </span>
               <span className="text-xs font-semibold text-slate-300 block truncate max-w-[120px] sm:max-w-[140px]">
@@ -53,13 +53,13 @@ export const RideCard: React.FC<RideCardProps> = ({
 
             {/* Dotted Route Vector Indicator */}
             <div className="flex flex-col items-center px-1">
-              <span className="text-[10px] font-mono text-cyan-400 font-bold mb-0.5">
+              <span className="text-[10px] font-mono text-[#9cb3ff] font-bold mb-0.5">
                 {ride.estimatedDuration}
               </span>
               <div className="flex items-center gap-1">
                 <div className="w-2 h-2 rounded-full bg-amber-400" />
-                <div className="w-8 sm:w-12 h-0.5 border-t border-dashed border-cyan-400/60" />
-                <div className="w-2 h-2 rounded-xs bg-cyan-400" />
+                <div className="w-8 sm:w-12 h-0.5 border-t border-dashed border-[#315cff]/60" />
+                <div className="w-2 h-2 rounded-xs bg-[#315cff]" />
               </div>
               {ride.waypoints.length > 0 && (
                 <span className="text-[9px] text-slate-400 mt-0.5">
@@ -70,7 +70,7 @@ export const RideCard: React.FC<RideCardProps> = ({
 
             {/* Destination & Arrival */}
             <div>
-              <span className="text-base sm:text-lg font-display font-black text-white block">
+              <span className="text-sm sm:text-lg font-display font-black text-white block whitespace-nowrap">
                 {ride.arrivalTime}
               </span>
               <span className="text-xs font-semibold text-slate-300 block truncate max-w-[120px] sm:max-w-[140px]">
@@ -85,7 +85,7 @@ export const RideCard: React.FC<RideCardProps> = ({
 
           {/* Pricing Highlight in USD ($) */}
           <div className="text-right shrink-0">
-            <span className="text-xl sm:text-2xl font-display font-black text-cyan-300 block">
+            <span className="text-xl sm:text-2xl font-display font-black text-[#c4cfff] block">
               ${ride.seatPrice.toFixed(2)}
             </span>
             <span className="text-[10px] text-slate-400 block font-mono">
@@ -99,7 +99,7 @@ export const RideCard: React.FC<RideCardProps> = ({
         {ride.waypoints && ride.waypoints.length > 0 && (
           <div className="mb-3.5 px-3 py-1.5 rounded-xl bg-[#0c0f17] border border-white/5 flex items-center justify-between text-[11px]">
             <div className="flex items-center gap-1.5 text-slate-300 truncate">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#00c29a] shrink-0" />
+              <span className="w-1.5 h-1.5 rounded-full bg-[#315cff] shrink-0" />
               <span className="text-slate-400 font-mono text-[10px]">Puntos en ruta:</span>
               <span className="font-medium text-white truncate">
                 {ride.waypoints.map(w => `${w.city} (${w.name.split(' ')[0]})`).join(' · ')}
@@ -120,7 +120,7 @@ export const RideCard: React.FC<RideCardProps> = ({
               <img 
                 src={ride.driver.avatar} 
                 alt={ride.driver.name} 
-                className="w-10 h-10 rounded-2xl object-cover border border-white/20 group-hover:border-cyan-400 transition-colors"
+                className="w-10 h-10 rounded-2xl object-cover border border-white/20 group-hover:border-[#315cff] transition-colors"
               />
               {ride.driver.verifiedDUI && (
                 <div 
@@ -134,7 +134,7 @@ export const RideCard: React.FC<RideCardProps> = ({
 
             <div>
               <div className="flex items-center gap-1.5">
-                <span className="text-xs sm:text-sm font-bold text-white group-hover:text-cyan-300 transition-colors">
+                <span className="text-xs sm:text-sm font-bold text-white group-hover:text-[#c4cfff] transition-colors">
                   {ride.driver.name}
                 </span>
                 <span className="text-[11px] font-semibold text-yellow-400 flex items-center">
@@ -149,7 +149,7 @@ export const RideCard: React.FC<RideCardProps> = ({
 
           {/* Seats Left Pill */}
           <div className="text-right">
-            <span className={`text-[11px] font-mono font-bold px-2.5 py-1 rounded-xl border ${
+            <span className={`text-[10px] sm:text-[11px] whitespace-nowrap font-mono font-bold px-2.5 py-1 rounded-xl border ${
               ride.availableSeats === 1 
                 ? 'bg-amber-500/10 text-amber-400 border-amber-500/30' 
                 : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
@@ -157,8 +157,8 @@ export const RideCard: React.FC<RideCardProps> = ({
               {ride.availableSeats} {ride.availableSeats === 1 ? 'plaza restante' : 'plazas libres'}
             </span>
             {isLive && (
-              <span className="flex items-center justify-end gap-1 text-[10px] font-mono text-cyan-400 mt-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-ping" />
+              <span className="flex items-center justify-end gap-1 text-[10px] font-mono text-[#9cb3ff] mt-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#315cff] animate-ping" />
                 En ruta ahora
               </span>
             )}
@@ -177,7 +177,7 @@ export const RideCard: React.FC<RideCardProps> = ({
             </span>
           ))}
           {ride.isRecurring && (
-            <span className="text-[10px] text-cyan-300 bg-cyan-500/10 border border-cyan-500/30 px-2 py-0.5 rounded-lg font-mono">
+            <span className="text-[10px] text-[#c4cfff] bg-[#315cff]/10 border border-cyan-500/30 px-2 py-0.5 rounded-lg font-mono">
               Recurrente ({ride.recurringDays})
             </span>
           )}
@@ -193,7 +193,7 @@ export const RideCard: React.FC<RideCardProps> = ({
             e.stopPropagation();
             onSelect(ride);
           }}
-          className="flex-1 min-h-[42px] py-2 px-4 rounded-xl text-xs sm:text-sm font-bold text-slate-950 bg-gradient-to-r from-cyan-400 to-teal-400 hover:from-cyan-300 hover:to-teal-300 shadow-md shadow-cyan-500/15 flex items-center justify-center gap-2 transition-all transform active:scale-98"
+          className="flex-1 min-h-[42px] py-2 px-4 rounded-xl text-xs sm:text-sm font-bold text-slate-950 bg-gradient-to-r from-[#315cff] to-[#00a89d] hover:from-[#4d77ff] hover:to-[#22c4b7] shadow-md shadow-[#315cff]/15 flex items-center justify-center gap-2 transition-all transform active:scale-98"
         >
           <span>Ver Ruta & Reservar Asiento</span>
           <ArrowRight className="w-4 h-4" />
@@ -206,10 +206,10 @@ export const RideCard: React.FC<RideCardProps> = ({
               e.stopPropagation();
               onOpenLiveTelemetry(ride);
             }}
-            className="min-h-[42px] px-3 py-2 rounded-xl text-xs font-semibold text-cyan-300 bg-white/5 hover:bg-white/10 border border-cyan-500/30 flex items-center gap-1.5"
+            className="min-h-[42px] px-3 py-2 rounded-xl text-xs font-semibold text-[#c4cfff] bg-white/5 hover:bg-white/10 border border-cyan-500/30 flex items-center gap-1.5"
             title="Ver mapa en vivo"
           >
-            <Zap className="w-3.5 h-3.5 text-cyan-400" />
+            <Zap className="w-3.5 h-3.5 text-[#9cb3ff]" />
             <span className="hidden sm:inline">Mapa</span>
           </button>
         )}

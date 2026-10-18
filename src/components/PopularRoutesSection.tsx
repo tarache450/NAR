@@ -1,4 +1,5 @@
 import React from 'react';
+import SpotlightCard from './reactbits/SpotlightCard';
 import { RoutePopular } from '../types';
 import { ArrowRight, Clock, MapPin, Users } from 'lucide-react';
 
@@ -18,7 +19,7 @@ export const PopularRoutesSection: React.FC<PopularRoutesSectionProps> = ({
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div>
-            <span className="text-xs font-mono font-bold uppercase tracking-wider text-cyan-400 block mb-1">
+            <span className="text-xs font-mono font-bold uppercase tracking-wider text-[#9cb3ff] block mb-1">
               DESTINOS MÁS VIAJADOS
             </span>
             <h2 className="text-xl sm:text-3xl font-display font-extrabold text-white tracking-tight">
@@ -33,10 +34,13 @@ export const PopularRoutesSection: React.FC<PopularRoutesSectionProps> = ({
         {/* Routes Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
           {routes.map((rt) => (
-            <div
+            <SpotlightCard
               key={rt.id}
+              spotlightColor="#315cff"
               onClick={() => onSelectRoute(rt.origin, rt.destination)}
-              className="group relative bg-[#131722] hover:bg-[#181e2b] border border-white/10 hover:border-cyan-400/40 rounded-3xl overflow-hidden cursor-pointer transition-all duration-300 shadow-xl flex flex-col justify-between"
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelectRoute(rt.origin, rt.destination); } }}
+              role="button" tabIndex={0} aria-label={`Buscar viajes de ${rt.origin} a ${rt.destination}`}
+              className="group nar-route-card cursor-pointer flex flex-col justify-between"
             >
               {/* Photo Banner with overlay */}
               <div className="relative h-32 w-full overflow-hidden bg-slate-900">
@@ -50,7 +54,7 @@ export const PopularRoutesSection: React.FC<PopularRoutesSectionProps> = ({
                 {/* Price Tag Pill */}
                 <div className="absolute top-3 right-3 bg-[#0c0f17]/90 border border-white/10 px-2.5 py-1 rounded-xl shadow-lg">
                   <span className="text-[10px] text-slate-400 block font-mono">Desde</span>
-                  <span className="text-xs font-extrabold text-cyan-300 font-display">
+                  <span className="text-xs font-extrabold text-[#c4cfff] font-display">
                     ${rt.avgPrice.toFixed(2)} USD
                   </span>
                 </div>
@@ -65,9 +69,9 @@ export const PopularRoutesSection: React.FC<PopularRoutesSectionProps> = ({
               {/* Text content */}
               <div className="p-4 flex-1 flex flex-col justify-between">
                 <div>
-                  <h3 className="text-sm sm:text-base font-bold text-white group-hover:text-cyan-300 transition-colors flex items-center gap-1.5">
+                  <h3 className="text-sm sm:text-base font-bold text-white group-hover:text-[#c4cfff] transition-colors flex items-center gap-1.5">
                     <span>{rt.origin}</span>
-                    <ArrowRight className="w-3.5 h-3.5 text-cyan-400" />
+                    <ArrowRight className="w-3.5 h-3.5 text-[#9cb3ff]" />
                     <span>{rt.destination}</span>
                   </h3>
                   
@@ -80,13 +84,13 @@ export const PopularRoutesSection: React.FC<PopularRoutesSectionProps> = ({
                   <span className="text-[11px] font-mono text-slate-400">
                     {rt.activeRidesCount} conductores hoy
                   </span>
-                  <span className="text-cyan-400 font-bold group-hover:translate-x-1 transition-transform inline-flex items-center gap-1">
+                  <span className="text-[#9cb3ff] font-bold group-hover:translate-x-1 transition-transform inline-flex items-center gap-1">
                     Ver →
                   </span>
                 </div>
               </div>
 
-            </div>
+            </SpotlightCard>
           ))}
         </div>
 

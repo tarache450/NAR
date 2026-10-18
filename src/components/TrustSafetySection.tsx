@@ -122,7 +122,7 @@ export const TrustSafetySection: React.FC = () => {
                 <span className="text-[10px] font-mono text-emerald-300 bg-emerald-500/10 px-2 py-0.5 rounded-md border border-emerald-500/20">
                   DUI Verificado
                 </span>
-                <span className="text-[10px] font-mono text-cyan-300 bg-cyan-500/10 px-2 py-0.5 rounded-md border border-cyan-500/20">
+                <span className="text-[10px] font-mono text-[#c4cfff] bg-[#315cff]/10 px-2 py-0.5 rounded-md border border-cyan-500/20">
                   Teléfono +503 OK
                 </span>
                 <span className="text-[10px] font-mono text-slate-300 bg-white/5 px-2 py-0.5 rounded-md">

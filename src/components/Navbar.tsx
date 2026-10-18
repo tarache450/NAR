@@ -1,16 +1,11 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { 
-  Car, 
   Search, 
   PlusCircle, 
   ShieldCheck, 
-  UserCheck, 
   Radio, 
-  Compass, 
   Smartphone, 
   Monitor,
-  Menu,
-  X
 } from 'lucide-react';
 import { Logo } from './Logo';
 import { TabType } from './BottomNav';
@@ -34,8 +29,6 @@ export const Navbar: React.FC<NavbarProps> = ({
   isMobileMockup,
   onToggleMockup,
 }) => {
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-
   return (
     <header className="sticky top-0 z-40 w-full border-b border-white/10 bg-[#0c1017]/95 backdrop-blur-md">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -56,7 +49,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 onClick={() => onViewChange('explore')}
                 className={`px-3 py-1.5 rounded-xl transition-all ${
                   activeView === 'explore'
-                    ? 'text-cyan-300 bg-white/10'
+                    ? 'text-[#c4cfff] bg-white/10'
                     : 'text-slate-400 hover:text-white hover:bg-white/5'
                 }`}
               >
@@ -67,7 +60,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 onClick={() => onViewChange('search')}
                 className={`px-3 py-1.5 rounded-xl transition-all ${
                   activeView === 'search'
-                    ? 'text-cyan-300 bg-white/10'
+                    ? 'text-[#c4cfff] bg-white/10'
                     : 'text-slate-400 hover:text-white hover:bg-white/5'
                 }`}
               >
@@ -78,11 +71,11 @@ export const Navbar: React.FC<NavbarProps> = ({
                 onClick={() => onViewChange('telemetry')}
                 className={`px-3 py-1.5 rounded-xl transition-all flex items-center gap-1.5 ${
                   activeView === 'telemetry'
-                    ? 'text-cyan-300 bg-white/10'
+                    ? 'text-[#c4cfff] bg-white/10'
                     : 'text-slate-400 hover:text-white hover:bg-white/5'
                 }`}
               >
-                <Radio className="w-3.5 h-3.5 text-cyan-400 animate-pulse" />
+                <Radio className="w-3.5 h-3.5 text-[#9cb3ff] animate-pulse" />
                 Ruta en Vivo
               </button>
 
@@ -121,7 +114,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               }}
               className={`px-4 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
                 mode === 'offer'
-                  ? 'bg-gradient-to-r from-[#1ea2dc] to-[#00c29a] text-slate-950 shadow-md shadow-teal-500/20'
+                  ? 'bg-gradient-to-r from-[#315cff] to-[#00a89d] text-slate-950 shadow-md shadow-teal-500/20'
                   : 'text-slate-400 hover:text-white'
               }`}
             >
@@ -131,7 +124,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           </div>
 
           {/* Right User & CTA Actions */}
-          <div className="flex items-center gap-2.5 sm:gap-3">
+          <div className="flex items-center gap-2.5 sm:gap-3 pr-12 lg:pr-0">
             
             {/* View Mode Toggle: Simulator vs Desktop */}
             <button
@@ -141,12 +134,12 @@ export const Navbar: React.FC<NavbarProps> = ({
             >
               {isMobileMockup ? (
                 <>
-                  <Monitor className="w-3.5 h-3.5 text-cyan-400" />
+                  <Monitor className="w-3.5 h-3.5 text-[#9cb3ff]" />
                   <span>Modo Completo</span>
                 </>
               ) : (
                 <>
-                  <Smartphone className="w-3.5 h-3.5 text-cyan-400" />
+                  <Smartphone className="w-3.5 h-3.5 text-[#9cb3ff]" />
                   <span>Simular Móvil</span>
                 </>
               )}
@@ -155,7 +148,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             {/* Quick Publish Button */}
             <button
               onClick={onOpenPublish}
-              className="min-h-[40px] px-4 py-2 text-xs font-bold text-slate-950 bg-gradient-to-r from-cyan-400 to-[#00c29a] hover:from-cyan-300 hover:to-teal-300 rounded-xl shadow-lg shadow-cyan-500/20 flex items-center gap-2 transition-all transform active:scale-95"
+              className="min-h-[40px] px-4 py-2 text-xs font-bold text-slate-950 bg-gradient-to-r from-[#315cff] to-[#00a89d] hover:from-[#4d77ff] hover:to-[#22c4b7] rounded-xl shadow-lg shadow-[#315cff]/20 flex items-center gap-2 transition-all transform active:scale-95"
             >
               <PlusCircle className="w-4 h-4" />
               <span className="hidden xs:inline sm:inline">Ofrecer Asiento</span>
@@ -163,15 +156,15 @@ export const Navbar: React.FC<NavbarProps> = ({
             </button>
 
             {/* User Profile with DUI Verified Badge */}
-            <div 
+            <div
               onClick={() => onViewChange('profile')}
-              className="flex items-center gap-2 pl-2 border-l border-white/10 cursor-pointer"
+              className="hidden lg:flex items-center gap-2 pl-2 border-l border-white/10 cursor-pointer"
             >
               <div className="relative group">
                 <img
                   src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=120&q=80"
                   alt="Perfil Miguel"
-                  className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl object-cover border border-white/20 group-hover:border-cyan-400 transition-colors"
+                  className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl object-cover border border-white/20 group-hover:border-[#315cff] transition-colors"
                 />
                 <span 
                   className="absolute -bottom-1 -right-1 w-4 h-4 bg-emerald-500 text-white rounded-full flex items-center justify-center text-[9px] font-bold border-2 border-[#0c1017]" 
@@ -182,99 +175,10 @@ export const Navbar: React.FC<NavbarProps> = ({
               </div>
             </div>
 
-            {/* Mobile Menu Hamburger */}
-            <button
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="lg:hidden min-h-[40px] min-w-[40px] rounded-xl bg-[#151924] border border-white/10 text-slate-300 flex items-center justify-center"
-              aria-label="Menú"
-            >
-              {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-            </button>
-
           </div>
         </div>
       </div>
 
-      {/* Mobile Drawer */}
-      {mobileMenuOpen && (
-        <div className="lg:hidden border-t border-white/10 bg-[#0c1017] p-4 space-y-2 animate-in slide-in-from-top-2 duration-150">
-          <div className="grid grid-cols-2 gap-2 p-1 bg-[#151924] rounded-xl mb-3">
-            <button
-              onClick={() => {
-                onModeChange('request');
-                setMobileMenuOpen(false);
-              }}
-              className={`py-2 text-xs font-bold rounded-lg text-center ${
-                mode === 'request' ? 'bg-cyan-500 text-slate-950' : 'text-slate-400'
-              }`}
-            >
-              Buscar Asiento
-            </button>
-            <button
-              onClick={() => {
-                onModeChange('offer');
-                onOpenPublish();
-                setMobileMenuOpen(false);
-              }}
-              className={`py-2 text-xs font-bold rounded-lg text-center ${
-                mode === 'offer' ? 'bg-cyan-500 text-slate-950' : 'text-slate-400'
-              }`}
-            >
-              Publicar Asiento
-            </button>
-          </div>
-
-          <button
-            onClick={() => {
-              onViewChange('explore');
-              setMobileMenuOpen(false);
-            }}
-            className={`w-full text-left px-3.5 py-2.5 rounded-xl text-xs font-semibold ${
-              activeView === 'explore' ? 'bg-white/10 text-cyan-300' : 'text-slate-300'
-            }`}
-          >
-            Explorar Rutas Disponibles
-          </button>
-
-          <button
-            onClick={() => {
-              onViewChange('search');
-              setMobileMenuOpen(false);
-            }}
-            className={`w-full text-left px-3.5 py-2.5 rounded-xl text-xs font-semibold ${
-              activeView === 'search' ? 'bg-white/10 text-cyan-300' : 'text-slate-300'
-            }`}
-          >
-            Buscador Avanzado de Rutas
-          </button>
-
-          <button
-            onClick={() => {
-              onViewChange('telemetry');
-              setMobileMenuOpen(false);
-            }}
-            className={`w-full text-left px-3.5 py-2.5 rounded-xl text-xs font-semibold flex items-center gap-2 ${
-              activeView === 'telemetry' ? 'bg-white/10 text-cyan-300' : 'text-slate-300'
-            }`}
-          >
-            <Radio className="w-4 h-4 text-cyan-400" />
-            <span>Monitoreo de Ruta en Vivo</span>
-          </button>
-
-          <button
-            onClick={() => {
-              onViewChange('profile');
-              setMobileMenuOpen(false);
-            }}
-            className={`w-full text-left px-3.5 py-2.5 rounded-xl text-xs font-semibold flex items-center gap-2 ${
-              activeView === 'profile' ? 'bg-white/10 text-emerald-300' : 'text-slate-300'
-            }`}
-          >
-            <ShieldCheck className="w-4 h-4 text-emerald-400" />
-            <span>Mi Perfil & Identidad DUI</span>
-          </button>
-        </div>
-      )}
     </header>
   );
 };
