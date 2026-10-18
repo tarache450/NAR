@@ -1,4 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
+import BellToggleSource from './reactbits/BellToggle';
+const BellToggle = BellToggleSource as React.ComponentType<any>;
 import { 
   ShieldCheck, 
   UserCheck, 
@@ -26,8 +28,13 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   onOpenPublish,
   onExploreRides,
 }) => {
+  const [previewAlerts, setPreviewAlerts] = useState(false);
   return (
     <div className="max-w-4xl mx-auto px-4 py-6 sm:py-8 space-y-6">
+      <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-[#315cff]/25 bg-[#111827] p-4">
+        <div><h2 className="font-display font-bold text-white">Avisos de viajes</h2><p className="text-xs text-slate-400 mt-1">Vista previa de la preferencia. Aún no se envían notificaciones.</p></div>
+        <BellToggle offLabel="Activar vista previa" onLabel="Vista previa activa" pressed={previewAlerts} onChange={setPreviewAlerts} color="#c4c5d9" background="#080b10" onColor="#fff" onBackground="#315cff" waves={false} badge={false} />
+      </div>
       
       {/* Top Identity Card */}
       <div className="bg-[#131722] border border-white/10 rounded-3xl p-6 sm:p-8 shadow-2xl relative overflow-hidden">
@@ -42,7 +49,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             <img 
               src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=300&q=80" 
               alt="Miguel Ángel Cortez" 
-              className="w-24 h-24 sm:w-28 sm:h-28 rounded-3xl object-cover border-2 border-cyan-400 shadow-xl shadow-cyan-500/20"
+              className="w-24 h-24 sm:w-28 sm:h-28 rounded-3xl object-cover border-2 border-[#315cff] shadow-xl shadow-[#315cff]/20"
             />
             <div 
               className="absolute -bottom-2 -right-2 bg-emerald-500 text-white rounded-xl p-1.5 border-3 border-[#131722] shadow-md flex items-center justify-center"
@@ -79,7 +86,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                 DUI Verificado
               </span>
 
-              <span className="inline-flex items-center gap-1.5 text-xs font-mono font-bold text-cyan-300 bg-cyan-500/10 px-3 py-1 rounded-xl border border-cyan-500/20">
+              <span className="inline-flex items-center gap-1.5 text-xs font-mono font-bold text-[#c4cfff] bg-[#315cff]/10 px-3 py-1 rounded-xl border border-cyan-500/20">
                 <PhoneCall className="w-3.5 h-3.5" />
                 +503 7842-1920 Verificado
               </span>
@@ -100,7 +107,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           </div>
 
           <div className="p-3 rounded-2xl bg-[#0c1017] border border-white/5">
-            <span className="text-xl sm:text-2xl font-display font-black text-cyan-300 block">0</span>
+            <span className="text-xl sm:text-2xl font-display font-black text-[#c4cfff] block">0</span>
             <span className="text-[11px] text-slate-400 font-mono mt-0.5 block">Cancelaciones</span>
           </div>
 
@@ -121,7 +128,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       <div className="bg-[#131722] border border-white/10 rounded-3xl p-6 shadow-xl space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400">
+            <div className="w-9 h-9 rounded-xl bg-[#315cff]/10 border border-cyan-500/20 flex items-center justify-center text-[#9cb3ff]">
               <Car className="w-5 h-5" />
             </div>
             <div>
@@ -158,7 +165,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           <h2 className="text-base font-display font-bold text-white">
             Reseñas de Pasajeros Verificados
           </h2>
-          <span className="text-xs font-mono text-cyan-400">42 opiniones</span>
+          <span className="text-xs font-mono text-[#9cb3ff]">42 opiniones</span>
         </div>
 
         <div className="space-y-3">
@@ -208,7 +215,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
         <button
           onClick={onOpenPublish}
-          className="min-h-[48px] py-3 px-6 rounded-2xl text-xs sm:text-sm font-extrabold text-slate-950 bg-gradient-to-r from-cyan-400 to-teal-400 hover:from-cyan-300 hover:to-teal-300 shadow-xl shadow-cyan-500/20 flex items-center justify-center gap-2 transition-all transform active:scale-98"
+          className="min-h-[48px] py-3 px-6 rounded-2xl text-xs sm:text-sm font-extrabold text-slate-950 bg-gradient-to-r from-[#315cff] to-[#00a89d] hover:from-[#4d77ff] hover:to-[#22c4b7] shadow-xl shadow-[#315cff]/20 flex items-center justify-center gap-2 transition-all transform active:scale-98"
         >
           <Car className="w-4 h-4" />
           <span>Publicar un Nuevo Trayecto</span>
@@ -218,7 +225,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           onClick={onExploreRides}
           className="min-h-[48px] py-3 px-6 rounded-2xl text-xs sm:text-sm font-bold text-white bg-[#131722] hover:bg-[#1c2233] border border-white/10 flex items-center justify-center gap-2 transition-all"
         >
-          <Route className="w-4 h-4 text-cyan-400" />
+          <Route className="w-4 h-4 text-[#9cb3ff]" />
           <span>Buscar Asientos Disponibles</span>
         </button>
       </div>

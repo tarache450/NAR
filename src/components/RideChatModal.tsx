@@ -100,7 +100,7 @@ export const RideChatModal: React.FC<RideChatModalProps> = ({ ride, onClose }) =
               <img
                 src={ride.driver.avatar}
                 alt={ride.driver.name}
-                className="w-10 h-10 rounded-xl object-cover border border-cyan-400/30"
+                className="w-10 h-10 rounded-xl object-cover border border-[#315cff]/30"
               />
               <span className="absolute -bottom-1 -right-1 w-3.5 h-3.5 bg-emerald-500 text-white rounded-full flex items-center justify-center text-[8px] font-bold">
                 ✓
@@ -111,7 +111,7 @@ export const RideChatModal: React.FC<RideChatModalProps> = ({ ride, onClose }) =
                 <h3 className="font-display font-bold text-sm text-white">
                   Chat de la Ruta
                 </h3>
-                <span className="text-[10px] font-mono text-cyan-400 bg-cyan-500/10 px-2 py-0.5 rounded-md font-semibold">
+                <span className="text-[10px] font-mono text-[#9cb3ff] bg-[#315cff]/10 px-2 py-0.5 rounded-md font-semibold">
                   PRIVADO
                 </span>
               </div>
@@ -156,7 +156,7 @@ export const RideChatModal: React.FC<RideChatModalProps> = ({ ride, onClose }) =
               >
                 {!m.isCurrentUser && (
                   <div className="flex items-center justify-between gap-2 mb-1">
-                    <span className="font-bold text-[11px] text-cyan-300">
+                    <span className="font-bold text-[11px] text-[#c4cfff]">
                       {m.sender} {m.isDriver && '(Conductor)'}
                     </span>
                     <span className="text-[10px] text-slate-400">{m.time}</span>
@@ -174,9 +174,9 @@ export const RideChatModal: React.FC<RideChatModalProps> = ({ ride, onClose }) =
 
           {isTyping && (
             <div className="flex items-center gap-2 text-xs text-slate-400 pl-9">
-              <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-bounce" />
-              <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-bounce [animation-delay:0.2s]" />
-              <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-bounce [animation-delay:0.4s]" />
+              <span className="w-1.5 h-1.5 rounded-full bg-[#315cff] animate-bounce" />
+              <span className="w-1.5 h-1.5 rounded-full bg-[#315cff] animate-bounce [animation-delay:0.2s]" />
+              <span className="w-1.5 h-1.5 rounded-full bg-[#315cff] animate-bounce [animation-delay:0.4s]" />
               <span className="text-[11px]">El conductor está respondiendo...</span>
             </div>
           )}
@@ -203,11 +203,11 @@ export const RideChatModal: React.FC<RideChatModalProps> = ({ ride, onClose }) =
             onChange={(e) => setInputText(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleSend()}
             placeholder="Escribe un mensaje al conductor..."
-            className="flex-1 px-3.5 py-2 text-xs bg-[#131722] border border-white/10 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400"
+            className="flex-1 px-3.5 py-2 text-xs bg-[#131722] border border-white/10 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-[#315cff]"
           />
           <button
             onClick={() => handleSend()}
-            className="w-9 h-9 rounded-xl bg-cyan-400 hover:bg-cyan-300 text-slate-950 flex items-center justify-center transition-all shrink-0"
+            className="w-9 h-9 rounded-xl bg-[#315cff] hover:bg-cyan-300 text-slate-950 flex items-center justify-center transition-all shrink-0"
           >
             <Send className="w-4 h-4" />
           </button>

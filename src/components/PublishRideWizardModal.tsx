@@ -1,14 +1,14 @@
 import React, { useState } from 'react';
 import { Ride } from '../types';
-import { 
-  X, 
-  MapPin, 
-  Calendar, 
-  Clock, 
-  Users, 
-  Car, 
-  CheckCircle2, 
-  ArrowRight, 
+import {
+  X,
+  MapPin,
+  Calendar,
+  Clock,
+  Users,
+  Car,
+  CheckCircle2,
+  ArrowRight,
   ArrowLeft,
   Coins,
   ShieldCheck,
@@ -134,11 +134,11 @@ export const PublishRideWizardModal: React.FC<PublishRideWizardModalProps> = ({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/80 backdrop-blur-md overflow-y-auto">
       <div className="relative w-full max-w-lg bg-[#131722] border border-white/10 rounded-3xl overflow-hidden shadow-2xl my-auto animate-in fade-in zoom-in-95 duration-200">
-        
+
         {/* Header with step progress indicator (Ref 4 Style) */}
         <div className="p-5 sm:p-6 bg-gradient-to-b from-[#1c2233] to-[#131722] border-b border-white/10">
           <div className="flex items-center justify-between mb-4">
-            <span className="text-xs font-mono font-bold uppercase tracking-wider text-cyan-400">
+            <span className="text-xs font-mono font-bold uppercase tracking-wider text-[#9cb3ff]">
               Paso {step} de 5 · Publicar Asiento
             </span>
             <button
@@ -151,8 +151,8 @@ export const PublishRideWizardModal: React.FC<PublishRideWizardModalProps> = ({
 
           {/* Progress bar line */}
           <div className="h-1.5 w-full bg-white/10 rounded-full overflow-hidden">
-            <div 
-              className="h-full bg-gradient-to-r from-cyan-400 to-teal-400 rounded-full transition-all duration-300"
+            <div
+              className="h-full bg-gradient-to-r from-[#315cff] to-[#00a89d] rounded-full transition-all duration-300"
               style={{ width: `${(step / 5) * 100}%` }}
             />
           </div>
@@ -160,7 +160,7 @@ export const PublishRideWizardModal: React.FC<PublishRideWizardModalProps> = ({
 
         {/* Dynamic Step Content */}
         <div className="p-5 sm:p-6 min-h-[300px] flex flex-col justify-between">
-          
+
           {/* STEP 1: Origen */}
           {step === 1 && (
             <div className="space-y-4 animate-in fade-in">
@@ -181,8 +181,8 @@ export const PublishRideWizardModal: React.FC<PublishRideWizardModalProps> = ({
                     type="button"
                     onClick={() => setOriginCity(c)}
                     className={`text-xs px-3 py-1.5 rounded-xl border transition-all ${
-                      originCity.includes(c) 
-                        ? 'bg-cyan-500/20 text-cyan-300 border-cyan-400' 
+                      originCity.includes(c)
+                        ? 'bg-[#315cff]/20 text-[#c4cfff] border-[#315cff]'
                         : 'bg-[#0c0f17] text-slate-400 border-white/10'
                     }`}
                   >
@@ -200,7 +200,7 @@ export const PublishRideWizardModal: React.FC<PublishRideWizardModalProps> = ({
                   value={originCity}
                   onChange={(e) => setOriginCity(e.target.value)}
                   placeholder="Ej. Multiplaza / Plaza Salvador del Mundo"
-                  className="w-full p-3 text-sm bg-[#0c0f17] border border-white/10 rounded-2xl text-white focus:outline-none focus:border-cyan-400"
+                  className="w-full p-3 text-sm bg-[#0c0f17] border border-white/10 rounded-2xl text-white focus:outline-none focus:border-[#315cff]"
                 />
               </div>
 
@@ -213,7 +213,7 @@ export const PublishRideWizardModal: React.FC<PublishRideWizardModalProps> = ({
                   value={originAddress}
                   onChange={(e) => setOriginAddress(e.target.value)}
                   placeholder="Ej. Gasolinera Puma frente a Las Cascadas"
-                  className="w-full p-3 text-sm bg-[#0c0f17] border border-white/10 rounded-2xl text-white focus:outline-none focus:border-cyan-400"
+                  className="w-full p-3 text-sm bg-[#0c0f17] border border-white/10 rounded-2xl text-white focus:outline-none focus:border-[#315cff]"
                 />
               </div>
             </div>
@@ -239,8 +239,8 @@ export const PublishRideWizardModal: React.FC<PublishRideWizardModalProps> = ({
                     type="button"
                     onClick={() => setDestinationCity(c)}
                     className={`text-xs px-3 py-1.5 rounded-xl border transition-all ${
-                      destinationCity.includes(c) 
-                        ? 'bg-cyan-500/20 text-cyan-300 border-cyan-400' 
+                      destinationCity.includes(c)
+                        ? 'bg-[#315cff]/20 text-[#c4cfff] border-[#315cff]'
                         : 'bg-[#0c0f17] text-slate-400 border-white/10'
                     }`}
                   >
@@ -258,7 +258,7 @@ export const PublishRideWizardModal: React.FC<PublishRideWizardModalProps> = ({
                   value={destinationCity}
                   onChange={(e) => setDestinationCity(e.target.value)}
                   placeholder="Ej. Santa Ana / El Tunco"
-                  className="w-full p-3 text-sm bg-[#0c0f17] border border-white/10 rounded-2xl text-white focus:outline-none focus:border-cyan-400"
+                  className="w-full p-3 text-sm bg-[#0c0f17] border border-white/10 rounded-2xl text-white focus:outline-none focus:border-[#315cff]"
                 />
               </div>
 
@@ -271,7 +271,7 @@ export const PublishRideWizardModal: React.FC<PublishRideWizardModalProps> = ({
                   value={intermediateStop}
                   onChange={(e) => setIntermediateStop(e.target.value)}
                   placeholder="Ej. Santa Tecla (Paseo El Carmen / Parque San Martín)"
-                  className="w-full p-3 text-sm bg-[#0c0f17] border border-white/10 rounded-2xl text-white focus:outline-none focus:border-cyan-400"
+                  className="w-full p-3 text-sm bg-[#0c0f17] border border-white/10 rounded-2xl text-white focus:outline-none focus:border-[#315cff]"
                 />
                 <span className="text-[10px] text-slate-500 mt-1 block">
                   Solo si pasa por tu camino directo, sin desvíos molestos.
@@ -302,7 +302,7 @@ export const PublishRideWizardModal: React.FC<PublishRideWizardModalProps> = ({
                     value={departureDate}
                     onChange={(e) => setDepartureDate(e.target.value)}
                     placeholder="Hoy, Miércoles"
-                    className="w-full p-3 text-sm bg-[#0c0f17] border border-white/10 rounded-2xl text-white focus:outline-none focus:border-cyan-400"
+                    className="w-full p-3 text-sm bg-[#0c0f17] border border-white/10 rounded-2xl text-white focus:outline-none focus:border-[#315cff]"
                   />
                 </div>
 
@@ -315,7 +315,7 @@ export const PublishRideWizardModal: React.FC<PublishRideWizardModalProps> = ({
                     value={departureTime}
                     onChange={(e) => setDepartureTime(e.target.value)}
                     placeholder="06:30 AM"
-                    className="w-full p-3 text-sm bg-[#0c0f17] border border-white/10 rounded-2xl text-white focus:outline-none focus:border-cyan-400"
+                    className="w-full p-3 text-sm bg-[#0c0f17] border border-white/10 rounded-2xl text-white focus:outline-none focus:border-[#315cff]"
                   />
                 </div>
               </div>
@@ -330,7 +330,7 @@ export const PublishRideWizardModal: React.FC<PublishRideWizardModalProps> = ({
                   type="button"
                   onClick={() => setIsRecurring(!isRecurring)}
                   className={`px-3 py-1 text-xs font-bold rounded-xl transition-all ${
-                    isRecurring ? 'bg-cyan-500 text-slate-950' : 'bg-white/10 text-slate-400'
+                    isRecurring ? 'bg-[#315cff] text-slate-950' : 'bg-white/10 text-slate-400'
                   }`}
                 >
                   {isRecurring ? 'Sí, Recurrente' : 'Solo este día'}
@@ -364,7 +364,7 @@ export const PublishRideWizardModal: React.FC<PublishRideWizardModalProps> = ({
                       onClick={() => setSeats(n)}
                       className={`py-2.5 rounded-xl text-sm font-bold transition-all ${
                         seats === n
-                          ? 'bg-cyan-500 text-slate-950 shadow-md'
+                          ? 'bg-[#315cff] text-slate-950 shadow-md'
                           : 'bg-[#0c0f17] text-slate-400 border border-white/10'
                       }`}
                     >
@@ -388,7 +388,7 @@ export const PublishRideWizardModal: React.FC<PublishRideWizardModalProps> = ({
                     max="10"
                     value={pricePerSeat}
                     onChange={(e) => setPricePerSeat(Number(e.target.value))}
-                    className="flex-1 p-3 text-lg font-bold bg-[#0c0f17] border border-white/10 rounded-2xl text-cyan-300 focus:outline-none focus:border-cyan-400"
+                    className="flex-1 p-3 text-lg font-bold bg-[#0c0f17] border border-white/10 rounded-2xl text-[#c4cfff] focus:outline-none focus:border-[#315cff]"
                   />
                   <span className="text-xs text-slate-400 font-mono">USD</span>
                 </div>
@@ -468,7 +468,7 @@ export const PublishRideWizardModal: React.FC<PublishRideWizardModalProps> = ({
               <button
                 type="button"
                 onClick={handleNext}
-                className="px-6 py-2.5 rounded-xl text-xs font-bold text-slate-950 bg-cyan-400 hover:bg-cyan-300 shadow-md shadow-cyan-500/20 flex items-center gap-1.5 ml-auto"
+                className="px-6 py-2.5 rounded-xl text-xs font-bold text-slate-950 bg-[#315cff] hover:bg-cyan-300 shadow-md shadow-[#315cff]/20 flex items-center gap-1.5 ml-auto"
               >
                 <span>Continuar</span>
                 <ArrowRight className="w-3.5 h-3.5" />
@@ -478,7 +478,7 @@ export const PublishRideWizardModal: React.FC<PublishRideWizardModalProps> = ({
                 type="button"
                 disabled={isDone}
                 onClick={handleFinish}
-                className="px-6 py-2.5 rounded-xl text-xs font-bold text-slate-950 bg-gradient-to-r from-cyan-400 to-teal-400 hover:from-cyan-300 hover:to-teal-300 shadow-lg shadow-cyan-500/25 flex items-center gap-1.5 ml-auto"
+                className="px-6 py-2.5 rounded-xl text-xs font-bold text-slate-950 bg-gradient-to-r from-[#315cff] to-[#00a89d] hover:from-[#4d77ff] hover:to-[#22c4b7] shadow-lg shadow-[#315cff]/25 flex items-center gap-1.5 ml-auto"
               >
                 {isDone ? (
                   <>

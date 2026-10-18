@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useRef } from 'react';
+import React, { lazy, Suspense, useState, useRef } from 'react';
 import { INITIAL_RIDES, POPULAR_ROUTES } from './data/mockData';
 import { Ride } from './types';
 import { Navbar } from './components/Navbar';
@@ -12,15 +12,17 @@ import { HeroSearch } from './components/HeroSearch';
 import { HowItWorksVisual } from './components/HowItWorksVisual';
 import { PopularRoutesSection } from './components/PopularRoutesSection';
 import { RideCard } from './components/RideCard';
-import { SearchView } from './components/SearchView';
-import { ProfileView } from './components/ProfileView';
 import { TrustSafetySection } from './components/TrustSafetySection';
-import { LiveTelemetryView } from './components/LiveTelemetryView';
-import { RideDetailModal } from './components/RideDetailModal';
-import { PublishRideWizardModal } from './components/PublishRideWizardModal';
-import { DigitalBoardingPassModal } from './components/DigitalBoardingPassModal';
-import { RideChatModal } from './components/RideChatModal';
 import { Logo } from './components/Logo';
+
+const SearchView = lazy(() => import('./components/SearchView').then(m => ({ default: m.SearchView })));
+const LiveTelemetryView = lazy(() => import('./components/LiveTelemetryView').then(m => ({ default: m.LiveTelemetryView })));
+const PublishRideWizardModal = lazy(() => import('./components/PublishRideWizardModal').then(m => ({ default: m.PublishRideWizardModal })));
+const DigitalBoardingPassModal = lazy(() => import('./components/DigitalBoardingPassModal').then(m => ({ default: m.DigitalBoardingPassModal })));
+const RideChatModal = lazy(() => import('./components/RideChatModal').then(m => ({ default: m.RideChatModal })));
+const ProfileView = lazy(() => import('./components/ProfileView').then(m => ({ default: m.ProfileView })));
+const RideDetailModal = lazy(() => import('./components/RideDetailModal').then(m => ({ default: m.RideDetailModal })));
+const StaggeredMenu = lazy(() => import('./components/reactbits/StaggeredMenu').then(m => ({ default: m.default as React.ComponentType<any> })));
 import { 
   Search, 
   MapPin, 
@@ -107,8 +109,11 @@ export default function App() {
       ride.destination.city.toLowerCase().includes(cityFilter.toLowerCase());
 
     const hasEnoughSeats = ride.availableSeats >= passengers;
+    const matchesDate = selectedDate === 'hoy'
+      ? ride.date.startsWith('Hoy') || ride.date === new Date().toLocaleDateString('sv-SE')
+      : ride.date === selectedDate;
 
-    return matchesOrigin && matchesDest && matchesCityFilter && hasEnoughSeats;
+    return matchesOrigin && matchesDest && matchesCityFilter && hasEnoughSeats && matchesDate;
   });
 
   const handleBookSuccess = (bookedRide: Ride, seatCount: number) => {
@@ -172,15 +177,6 @@ export default function App() {
               onOpenPublish={() => setIsPublishWizardOpen(true)}
             />
 
-            {/* Popular Routes 1-click exploration */}
-            <PopularRoutesSection
-              routes={popularRoutes}
-              onSelectRoute={handleSelectPopularRoute}
-            />
-
-            {/* Visual 3 Steps - No text overload */}
-            <HowItWorksVisual />
-
             {/* Available Rides Section with Results */}
             <section ref={resultsRef} className="pt-4 scroll-mt-20">
               <div className="max-w-6xl mx-auto px-4">
@@ -188,7 +184,7 @@ export default function App() {
                 {/* Results Section Header */}
                 <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-6">
                   <div>
-                    <span className="text-xs font-mono font-bold uppercase tracking-wider text-cyan-400 block mb-1">
+                    <span className="text-xs font-mono font-bold uppercase tracking-wider text-[#9cb3ff] block mb-1">
                       RUTAS COMPATIBLES EN EL SALVADOR · NAR
                     </span>
                     <h2 className="text-2xl sm:text-3xl font-display font-extrabold text-white tracking-tight">
@@ -213,7 +209,7 @@ export default function App() {
                         onClick={() => setCityFilter(f.val)}
                         className={`text-xs px-3 py-1.5 rounded-xl font-medium transition-all shrink-0 ${
                           cityFilter === f.val
-                            ? 'bg-cyan-500 text-slate-950 font-bold shadow-md'
+                            ? 'bg-[#315cff] text-slate-950 font-bold shadow-md'
                             : 'bg-[#131722] text-slate-400 hover:text-white border border-white/10'
                         }`}
                       >
@@ -249,7 +245,7 @@ export default function App() {
                     </p>
                     <button
                       onClick={() => setIsPublishWizardOpen(true)}
-                      className="mt-5 px-6 py-2.5 rounded-xl text-xs sm:text-sm font-bold text-slate-950 bg-gradient-to-r from-cyan-400 to-[#00c29a] hover:from-cyan-300 hover:to-teal-300 shadow-md shadow-cyan-500/20"
+                      className="mt-5 px-6 py-2.5 rounded-xl text-xs sm:text-sm font-bold text-slate-950 bg-gradient-to-r from-[#315cff] to-[#00a89d] hover:from-[#4d77ff] hover:to-[#22c4b7] shadow-md shadow-[#315cff]/20"
                     >
                       Publicar Mi Asiento Ahora
                     </button>
@@ -259,6 +255,15 @@ export default function App() {
               </div>
             </section>
 
+            {/* Popular Routes 1-click exploration */}
+            <PopularRoutesSection
+              routes={popularRoutes}
+              onSelectRoute={handleSelectPopularRoute}
+            />
+
+            {/* Visual 3 Steps - No text overload */}
+            <HowItWorksVisual />
+
             {/* Trust and Safety Section */}
             <TrustSafetySection />
 
@@ -267,7 +272,7 @@ export default function App() {
 
         {/* TAB 2: BUSCADOR AVANZADO */}
         {activeTab === 'search' && (
-          <SearchView
+          <Suspense fallback={<div className="p-8 text-slate-400">Cargando buscador…</div>}><SearchView
             rides={rides}
             onSelectRide={(r) => setDetailRide(r)}
             onOpenLiveTelemetry={(r) => {
@@ -276,26 +281,26 @@ export default function App() {
             }}
             initialOrigin={origin}
             initialDestination={destination}
-          />
+          /></Suspense>
         )}
 
         {/* TAB 3: TELEMETRÍA EN VIVO */}
         {activeTab === 'telemetry' && (
           <div className="py-6 px-4">
-            <LiveTelemetryView
+            <Suspense fallback={<div className="p-8 text-slate-400">Cargando ruta…</div>}><LiveTelemetryView
               ride={activeTelemetryRide}
               onOpenPass={() => setPassRide(activeTelemetryRide)}
               onOpenChat={() => setChatRide(activeTelemetryRide)}
-            />
+            /></Suspense>
           </div>
         )}
 
         {/* TAB 4: PERFIL & CONFIANZA */}
         {activeTab === 'profile' && (
-          <ProfileView
+          <Suspense fallback={<div className="p-8 text-slate-400">Cargando perfil…</div>}><ProfileView
             onOpenPublish={() => setIsPublishWizardOpen(true)}
             onExploreRides={() => setActiveTab('explore')}
-          />
+          /></Suspense>
         )}
 
       </div>
@@ -303,12 +308,12 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0c1017] text-slate-100 flex flex-col font-body antialiased pb-20 md:pb-0 selection:bg-cyan-500/30 selection:text-white">
+    <div className="min-h-screen bg-[#0c1017] text-slate-100 flex flex-col font-body antialiased pb-20 md:pb-0 selection:bg-[#315cff]/30 selection:text-white">
       
       {/* Toast Notification */}
       {toastMessage && (
-        <div className="fixed top-4 right-4 z-50 bg-[#161d2d] border border-cyan-400 text-white text-xs px-4 py-3 rounded-2xl shadow-2xl flex items-center gap-2.5 animate-in fade-in slide-in-from-top-4 duration-200">
-          <CheckCircle2 className="w-4 h-4 text-cyan-400 shrink-0" />
+        <div className="fixed top-4 right-4 z-50 bg-[#161d2d] border border-[#315cff] text-white text-xs px-4 py-3 rounded-2xl shadow-2xl flex items-center gap-2.5 animate-in fade-in slide-in-from-top-4 duration-200">
+          <CheckCircle2 className="w-4 h-4 text-[#9cb3ff] shrink-0" />
           <span>{toastMessage}</span>
         </div>
       )}
@@ -333,6 +338,27 @@ export default function App() {
         onToggleMockup={() => setIsMobileMockup(!isMobileMockup)}
       />
 
+      {!detailRide && !isPublishWizardOpen && !passRide && !chatRide && <div className="nar-staggered-menu lg:hidden">
+        <Suspense fallback={null}>
+          <StaggeredMenu
+            isFixed
+            colors={['#315cff', '#00a89d']}
+            items={[
+              { label: 'Explorar', ariaLabel: 'Explorar rutas', view: 'explore' },
+              { label: 'Buscar', ariaLabel: 'Buscar viajes', view: 'search' },
+              { label: 'En vivo', ariaLabel: 'Ver la ruta en vivo', view: 'telemetry' },
+              { label: 'Mi perfil', ariaLabel: 'Ver mi perfil', view: 'profile' },
+              { label: 'Publicar', ariaLabel: 'Publicar un viaje', view: 'publish' },
+            ]}
+            onItemClick={(item: { view: TabType }) => item.view === 'publish' ? setIsPublishWizardOpen(true) : setActiveTab(item.view)}
+            displaySocials={false}
+            menuButtonColor="#ffffff"
+            openMenuButtonColor="#ffffff"
+            accentColor="#9cb3ff"
+          />
+        </Suspense>
+      </div>}
+
       {/* Main Body */}
       <main className="flex-1 w-full">
         {isMobileMockup ? (
@@ -340,11 +366,11 @@ export default function App() {
           <div className="flex flex-col items-center justify-center my-4 px-2">
             
             <div className="mb-3 flex items-center gap-2 text-xs text-slate-400 font-mono">
-              <span className="w-2 h-2 rounded-full bg-cyan-400" />
+              <span className="w-2 h-2 rounded-full bg-[#315cff]" />
               <span>Simulador Móvil NAR (390 x 844 px)</span>
               <button 
                 onClick={() => setIsMobileMockup(false)}
-                className="text-cyan-300 hover:underline ml-2"
+                className="text-[#c4cfff] hover:underline ml-2"
               >
                 Pantalla completa
               </button>
@@ -357,7 +383,7 @@ export default function App() {
                 <span className="text-[12px] font-mono text-white font-semibold">07:15</span>
                 <div className="w-24 h-4 bg-black rounded-full mx-auto" />
                 <div className="flex items-center gap-1.5 text-xs text-slate-300">
-                  <Wifi className="w-3.5 h-3.5 text-cyan-400" />
+                  <Wifi className="w-3.5 h-3.5 text-[#9cb3ff]" />
                   <BatteryMedium className="w-3.5 h-3.5 text-white" />
                 </div>
               </div>
@@ -372,7 +398,7 @@ export default function App() {
                 <button
                   onClick={() => setActiveTab('explore')}
                   className={`flex flex-col items-center gap-0.5 text-[10px] ${
-                    activeTab === 'explore' ? 'text-cyan-400 font-bold' : 'text-slate-400'
+                    activeTab === 'explore' ? 'text-[#9cb3ff] font-bold' : 'text-slate-400'
                   }`}
                 >
                   <Logo size="sm" showWordmark={false} />
@@ -382,7 +408,7 @@ export default function App() {
                 <button
                   onClick={() => setActiveTab('search')}
                   className={`flex flex-col items-center gap-0.5 text-[10px] ${
-                    activeTab === 'search' ? 'text-cyan-400 font-bold' : 'text-slate-400'
+                    activeTab === 'search' ? 'text-[#9cb3ff] font-bold' : 'text-slate-400'
                   }`}
                 >
                   <Search className="w-4 h-4" />
@@ -391,7 +417,7 @@ export default function App() {
 
                 <button
                   onClick={() => setIsPublishWizardOpen(true)}
-                  className="w-10 h-10 -mt-5 rounded-full bg-cyan-400 border-2 border-[#0c1017] flex items-center justify-center text-slate-950 shadow-lg"
+                  className="w-10 h-10 -mt-5 rounded-full bg-[#315cff] border-2 border-[#0c1017] flex items-center justify-center text-slate-950 shadow-lg"
                   aria-label="Publicar"
                 >
                   <Car className="w-5 h-5" />
@@ -400,7 +426,7 @@ export default function App() {
                 <button
                   onClick={() => setActiveTab('telemetry')}
                   className={`flex flex-col items-center gap-0.5 text-[10px] ${
-                    activeTab === 'telemetry' ? 'text-cyan-400 font-bold' : 'text-slate-400'
+                    activeTab === 'telemetry' ? 'text-[#9cb3ff] font-bold' : 'text-slate-400'
                   }`}
                 >
                   <Radio className="w-4 h-4" />
@@ -446,7 +472,7 @@ export default function App() {
 
       {/* Ride Detail & Booking Modal */}
       {detailRide && (
-        <RideDetailModal
+        <Suspense fallback={null}><RideDetailModal
           ride={detailRide}
           onClose={() => setDetailRide(null)}
           onBookSuccess={handleBookSuccess}
@@ -454,32 +480,32 @@ export default function App() {
             setActiveTelemetryRide(ride);
             setActiveTab('telemetry');
           }}
-        />
+        /></Suspense>
       )}
 
       {/* Driver Wizard Progressive Publish Modal (Ref 4 Style) */}
       {isPublishWizardOpen && (
-        <PublishRideWizardModal
+        <Suspense fallback={null}><PublishRideWizardModal
           onClose={() => setIsPublishWizardOpen(false)}
           onPublish={handlePublishSuccess}
-        />
+        /></Suspense>
       )}
 
       {/* Digital Boarding Pass Modal */}
       {passRide && (
-        <DigitalBoardingPassModal
+        <Suspense fallback={null}><DigitalBoardingPassModal
           ride={passRide}
           seatNumber={passSeatCount}
           onClose={() => setPassRide(null)}
-        />
+        /></Suspense>
       )}
 
       {/* Encrypted In-Ride Chat Modal */}
       {chatRide && (
-        <RideChatModal
+        <Suspense fallback={null}><RideChatModal
           ride={chatRide}
           onClose={() => setChatRide(null)}
-        />
+        /></Suspense>
       )}
 
       {/* Footer */}
@@ -493,7 +519,7 @@ export default function App() {
           <div className="flex items-center gap-4 text-[11px] font-mono text-slate-400 flex-wrap justify-center">
             <span className="text-emerald-400">✓ DUI Verificado</span>
             <span>·</span>
-            <span className="text-cyan-300">Aporte Justo en USD</span>
+            <span className="text-[#c4cfff]">Aporte Justo en USD</span>
             <span>·</span>
             <span>Carretera Los Chorros & Panamericana</span>
           </div>

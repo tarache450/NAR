@@ -73,7 +73,7 @@ export const SearchView: React.FC<SearchViewProps> = ({
       
       {/* Header */}
       <div>
-        <span className="text-xs font-mono font-bold uppercase tracking-wider text-cyan-400 block mb-1">
+        <span className="text-xs font-mono font-bold uppercase tracking-wider text-[#9cb3ff] block mb-1">
           BUSCADOR DE VIAJES COMPARTIDOS NAR
         </span>
         <h1 className="text-2xl sm:text-3xl font-display font-extrabold text-white tracking-tight">
@@ -99,7 +99,7 @@ export const SearchView: React.FC<SearchViewProps> = ({
               value={origin}
               onChange={(e) => setOrigin(e.target.value)}
               placeholder="Ej. San Salvador, Multiplaza, Santa Tecla..."
-              className="w-full min-h-[46px] px-3.5 py-2.5 text-sm bg-[#0c1017] border border-white/10 rounded-2xl text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400"
+              className="w-full min-h-[46px] px-3.5 py-2.5 text-sm bg-[#0c1017] border border-white/10 rounded-2xl text-white placeholder-slate-500 focus:outline-none focus:border-[#315cff]"
             />
           </div>
 
@@ -107,7 +107,7 @@ export const SearchView: React.FC<SearchViewProps> = ({
             <button
               type="button"
               onClick={handleSwap}
-              className="w-10 h-10 rounded-xl bg-[#0c1017] hover:bg-white/10 border border-white/10 text-cyan-400 flex items-center justify-center transition-colors"
+              className="w-10 h-10 rounded-xl bg-[#0c1017] hover:bg-white/10 border border-white/10 text-[#9cb3ff] flex items-center justify-center transition-colors"
               title="Invertir ciudades"
             >
               <ArrowRightLeft className="w-4 h-4" />
@@ -115,7 +115,7 @@ export const SearchView: React.FC<SearchViewProps> = ({
           </div>
 
           <div className="md:col-span-5 relative">
-            <label className="text-[10px] font-mono uppercase text-cyan-400 font-bold block mb-1">
+            <label className="text-[10px] font-mono uppercase text-[#9cb3ff] font-bold block mb-1">
               Destino
             </label>
             <input
@@ -123,7 +123,7 @@ export const SearchView: React.FC<SearchViewProps> = ({
               value={destination}
               onChange={(e) => setDestination(e.target.value)}
               placeholder="Ej. Santa Ana, El Tunco, San Miguel, Sonsonate..."
-              className="w-full min-h-[46px] px-3.5 py-2.5 text-sm bg-[#0c1017] border border-white/10 rounded-2xl text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400"
+              className="w-full min-h-[46px] px-3.5 py-2.5 text-sm bg-[#0c1017] border border-white/10 rounded-2xl text-white placeholder-slate-500 focus:outline-none focus:border-[#315cff]"
             />
           </div>
 
@@ -142,7 +142,7 @@ export const SearchView: React.FC<SearchViewProps> = ({
                 type="button"
                 onClick={() => setTimeFilter('all')}
                 className={`py-1.5 text-xs font-semibold rounded-lg transition-all ${
-                  timeFilter === 'all' ? 'bg-cyan-500 text-slate-950 font-bold' : 'text-slate-400'
+                  timeFilter === 'all' ? 'bg-[#315cff] text-slate-950 font-bold' : 'text-slate-400'
                 }`}
               >
                 Cualquiera
@@ -151,7 +151,7 @@ export const SearchView: React.FC<SearchViewProps> = ({
                 type="button"
                 onClick={() => setTimeFilter('morning')}
                 className={`py-1.5 text-xs font-semibold rounded-lg transition-all ${
-                  timeFilter === 'morning' ? 'bg-cyan-500 text-slate-950 font-bold' : 'text-slate-400'
+                  timeFilter === 'morning' ? 'bg-[#315cff] text-slate-950 font-bold' : 'text-slate-400'
                 }`}
               >
                 Mañana
@@ -160,7 +160,7 @@ export const SearchView: React.FC<SearchViewProps> = ({
                 type="button"
                 onClick={() => setTimeFilter('afternoon')}
                 className={`py-1.5 text-xs font-semibold rounded-lg transition-all ${
-                  timeFilter === 'afternoon' ? 'bg-cyan-500 text-slate-950 font-bold' : 'text-slate-400'
+                  timeFilter === 'afternoon' ? 'bg-[#315cff] text-slate-950 font-bold' : 'text-slate-400'
                 }`}
               >
                 Tarde
@@ -172,7 +172,7 @@ export const SearchView: React.FC<SearchViewProps> = ({
           <div>
             <div className="flex items-center justify-between text-[11px] font-mono text-slate-400 mb-1.5">
               <span>Aporte Máximo:</span>
-              <span className="text-cyan-300 font-bold font-display">${maxPrice}.00 USD</span>
+              <span className="text-[#c4cfff] font-bold font-display">${maxPrice}.00 USD</span>
             </div>
             <input 
               type="range"
@@ -198,7 +198,7 @@ export const SearchView: React.FC<SearchViewProps> = ({
                   type="button"
                   onClick={() => setMinRating(rat)}
                   className={`py-1.5 text-xs font-semibold rounded-lg transition-all ${
-                    minRating === rat ? 'bg-cyan-500 text-slate-950 font-bold' : 'text-slate-400'
+                    minRating === rat ? 'bg-[#315cff] text-slate-950 font-bold' : 'text-slate-400'
                   }`}
                 >
                   ★ {rat}+
@@ -226,7 +226,7 @@ export const SearchView: React.FC<SearchViewProps> = ({
               setMaxPrice(6);
               setMinRating(4.5);
             }}
-            className="text-xs text-cyan-400 hover:underline"
+            className="text-xs text-[#9cb3ff] hover:underline"
           >
             Limpiar filtros
           </button>
