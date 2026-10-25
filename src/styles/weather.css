@@ -1,0 +1,17 @@
+.nar-weather {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  margin-top: 1rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid rgba(34, 211, 238, 0.22);
+  border-radius: 1rem;
+  background: #101c26;
+  color: #9deaf0;
+  font-size: 0.82rem;
+}
+.nar-weather-copy { display: flex; flex: 1; flex-wrap: wrap; gap: 0.2rem 0.7rem; }
+.nar-weather-copy strong { color: white; }
+.nar-weather-copy button { color: #67e8f9; text-decoration: underline; }
+.nar-weather a { color: #a7b7c4; text-decoration: underline; white-space: nowrap; }
+@media (max-width: 520px) { .nar-weather { flex-wrap: wrap; } .nar-weather a { margin-left: 2.1rem; } }

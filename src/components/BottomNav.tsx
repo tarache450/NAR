@@ -12,13 +12,11 @@ export type TabType = 'explore' | 'search' | 'publish' | 'telemetry' | 'profile'
 interface BottomNavProps {
   activeTab: TabType;
   onTabChange: (tab: TabType) => void;
-  hasActiveTrip?: boolean;
 }
 
 export const BottomNav: React.FC<BottomNavProps> = ({
   activeTab,
   onTabChange,
-  hasActiveTrip = true,
 }) => {
   return (
     <nav 
@@ -72,7 +70,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
           </span>
         </button>
 
-        {/* Tab 4: En Vivo */}
+        {/* Tab 4: Simulación de ruta */}
         <button
           type="button"
           onClick={() => onTabChange('telemetry')}
@@ -82,13 +80,8 @@ export const BottomNav: React.FC<BottomNavProps> = ({
               : 'text-slate-400 hover:text-slate-200'
           }`}
         >
-          <div className="relative">
-            <Radio className="w-5 h-5" />
-            {hasActiveTrip && (
-              <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-cyan-400 animate-ping" />
-            )}
-          </div>
-          <span className="text-[10px] tracking-tight leading-none">En Vivo</span>
+          <Radio className="w-5 h-5" />
+          <span className="text-[10px] tracking-tight leading-none">Ruta demo</span>
         </button>
 
         {/* Tab 5: Perfil / Seguridad */}

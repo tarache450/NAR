@@ -68,7 +68,7 @@ export const RideDetailModal: React.FC<RideDetailModalProps> = ({
                 />
                 <div 
                   className="absolute -bottom-1 -right-1 w-5 h-5 bg-emerald-500 text-white rounded-full flex items-center justify-center text-[10px] font-bold border-2 border-[#131722]"
-                  title="Identidad DUI Verificada"
+                  title="Perfil de demostración"
                 >
                   ✓
                 </div>
@@ -88,7 +88,7 @@ export const RideDetailModal: React.FC<RideDetailModalProps> = ({
                 </p>
                 <div className="flex items-center gap-2 text-[11px] text-emerald-400 mt-1 font-medium">
                   <ShieldCheck className="w-3.5 h-3.5" />
-                  <span>DUI y Teléfono salvadoreño verificados</span>
+                  <span>Perfil y valoración de ejemplo</span>
                 </div>
               </div>
             </div>

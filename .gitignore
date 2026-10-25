@@ -1,8 +1,12 @@
 node_modules/
 build/
 dist/
+server.js
 coverage/
+.playwright-cli/
 .DS_Store
 *.log
 .env*
 !.env.example
+var/
+backups/

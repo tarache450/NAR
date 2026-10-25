@@ -443,7 +443,7 @@ export const PublishRideWizardModal: React.FC<PublishRideWizardModalProps> = ({
               <div className="p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center gap-2.5 text-xs text-emerald-300">
                 <ShieldCheck className="w-5 h-5 shrink-0" />
                 <span>
-                  Tu perfil tiene <strong>DUI salvadoreño verificado</strong>. Los pasajeros viajarán con total confianza.
+                  Esta publicación forma parte de una <strong>demostración</strong>. La verificación de identidad aún no está conectada.
                 </span>
               </div>
             </div>

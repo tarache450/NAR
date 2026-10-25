@@ -31,8 +31,6 @@ export const LiveTelemetryView: React.FC<LiveTelemetryViewProps> = ({
 }) => {
   const [speed, setSpeed] = useState<number>(72);
   const [currentProgress, setCurrentProgress] = useState<number>(55);
-  const [copiedLink, setCopiedLink] = useState<boolean>(false);
-  const [sosActive, setSosActive] = useState<boolean>(false);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -44,11 +42,6 @@ export const LiveTelemetryView: React.FC<LiveTelemetryViewProps> = ({
     }, 2500);
     return () => clearInterval(interval);
   }, []);
-
-  const handleShareTrip = () => {
-    setCopiedLink(true);
-    setTimeout(() => setCopiedLink(false), 2000);
-  };
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto">
@@ -63,7 +56,7 @@ export const LiveTelemetryView: React.FC<LiveTelemetryViewProps> = ({
           <div>
             <div className="flex items-center gap-2">
               <span className="text-[10px] font-mono tracking-wider uppercase text-cyan-400 font-bold">
-                MONITOREO DE RUTA EN TIEMPO REAL
+                SIMULACIÓN DE RUTA · SIN GPS REAL
               </span>
               <span className="w-1.5 h-1.5 rounded-full bg-cyan-400" />
               <span className="text-[10px] text-slate-400 font-mono">CA-1 Panamericana</span>
@@ -89,27 +82,25 @@ export const LiveTelemetryView: React.FC<LiveTelemetryViewProps> = ({
             className="min-h-[42px] flex items-center gap-2 px-4 py-2 text-xs font-extrabold rounded-xl bg-gradient-to-r from-cyan-400 to-teal-400 hover:from-cyan-300 hover:to-teal-300 text-slate-950 shadow-md shadow-cyan-500/20"
           >
             <QrCode className="w-4 h-4" />
-            <span>Pase Digital QR</span>
+            <span>Pase de ejemplo</span>
           </button>
 
           <button
-            onClick={handleShareTrip}
+            disabled
+            title="Disponible cuando NAR tenga viajes reales"
             className="min-h-[42px] flex items-center gap-2 px-3.5 py-2 text-xs font-semibold rounded-xl bg-[#0c0f17] hover:bg-[#181d2a] text-slate-300 border border-white/10 transition-colors"
           >
             <Share2 className="w-4 h-4 text-slate-400" />
-            <span>{copiedLink ? '¡Enlace Copiado!' : 'Compartir con Familiar'}</span>
+            <span>Compartir · próximamente</span>
           </button>
 
           <button
-            onClick={() => setSosActive(!sosActive)}
-            className={`min-h-[42px] flex items-center gap-2 px-3.5 py-2 text-xs font-bold rounded-xl border transition-colors ${
-              sosActive
-                ? 'bg-rose-950 text-rose-200 border-rose-500'
-                : 'bg-[#0c0f17] text-rose-400 border-rose-500/30 hover:bg-rose-500/10'
-            }`}
+            disabled
+            title="No disponible en esta demostración"
+            className="min-h-[42px] flex items-center gap-2 px-3.5 py-2 text-xs font-bold rounded-xl border bg-[#0c0f17] text-slate-500 border-white/10 cursor-not-allowed"
           >
             <AlertTriangle className="w-4 h-4" />
-            <span>{sosActive ? 'S.O.S. Monitoreado' : 'Botón S.O.S.'}</span>
+            <span>SOS · no disponible</span>
           </button>
         </div>
       </div>
@@ -137,7 +128,7 @@ export const LiveTelemetryView: React.FC<LiveTelemetryViewProps> = ({
               <div className="flex items-center gap-2">
                 <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-pulse" />
                 <span className="text-xs font-mono text-slate-300">
-                  GPS EL SALVADOR · 13.6929° N, -89.2182° W
+                  MAPA ILUSTRATIVO · SIN UBICACIÓN EN DIRECTO
                 </span>
               </div>
               <span className="text-xs font-mono text-cyan-300 bg-[#0c0f17] px-3 py-1 rounded-xl border border-white/10">

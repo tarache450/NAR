@@ -27,16 +27,15 @@ export const RideCard: React.FC<RideCardProps> = ({
   
   return (
     <article 
-      onClick={() => onSelect(ride)}
-      className="group relative bg-[#131722] hover:bg-[#181d2b] border border-white/10 hover:border-cyan-400/40 rounded-3xl p-5 sm:p-6 transition-all duration-300 flex flex-col justify-between shadow-xl shadow-black/40 cursor-pointer"
+      className="nar-ride-card group relative bg-[#131722] hover:bg-[#181d2b] border border-white/10 hover:border-cyan-400/40 rounded-3xl p-5 sm:p-6 transition-all duration-300 flex flex-col justify-between shadow-xl shadow-black/40"
     >
       <div>
         
         {/* NIVEL 1: Ruta + Horario + Precio (Visual Scanning en 2 segundos) */}
-        <div className="flex items-start justify-between gap-3 mb-4 pb-4 border-b border-white/10">
+        <div className="nar-ride-header flex items-start justify-between gap-3 mb-4 pb-4 border-b border-white/10">
           
           {/* Timeline & Cities */}
-          <div className="flex items-center gap-3 flex-1">
+          <div className="nar-ride-timeline flex items-center gap-3 flex-1">
             
             {/* Origin & Departure */}
             <div>
@@ -46,7 +45,7 @@ export const RideCard: React.FC<RideCardProps> = ({
               <span className="text-xs font-semibold text-slate-300 block truncate max-w-[120px] sm:max-w-[140px]">
                 {ride.origin.city}
               </span>
-              <span className="text-[10px] text-slate-500 truncate block max-w-[120px]">
+              <span className="text-[10px] text-slate-400 truncate block max-w-[120px]">
                 {ride.origin.name.split(' ')[0]}
               </span>
             </div>
@@ -76,7 +75,7 @@ export const RideCard: React.FC<RideCardProps> = ({
               <span className="text-xs font-semibold text-slate-300 block truncate max-w-[120px] sm:max-w-[140px]">
                 {ride.destination.city}
               </span>
-              <span className="text-[10px] text-slate-500 truncate block max-w-[120px]">
+              <span className="text-[10px] text-slate-400 truncate block max-w-[120px]">
                 {ride.destination.name.split(' ')[0]}
               </span>
             </div>
@@ -84,7 +83,7 @@ export const RideCard: React.FC<RideCardProps> = ({
           </div>
 
           {/* Pricing Highlight in USD ($) */}
-          <div className="text-right shrink-0">
+          <div className="nar-ride-price text-right shrink-0">
             <span className="text-xl sm:text-2xl font-display font-black text-cyan-300 block">
               ${ride.seatPrice.toFixed(2)}
             </span>
@@ -122,14 +121,6 @@ export const RideCard: React.FC<RideCardProps> = ({
                 alt={ride.driver.name} 
                 className="w-10 h-10 rounded-2xl object-cover border border-white/20 group-hover:border-cyan-400 transition-colors"
               />
-              {ride.driver.verifiedDUI && (
-                <div 
-                  className="absolute -bottom-1 -right-1 w-4 h-4 bg-emerald-500 text-white rounded-full flex items-center justify-center text-[9px] font-bold border-2 border-[#131722]"
-                  title="DUI & Teléfono Verificados"
-                >
-                  ✓
-                </div>
-              )}
             </div>
 
             <div>
@@ -207,7 +198,7 @@ export const RideCard: React.FC<RideCardProps> = ({
               onOpenLiveTelemetry(ride);
             }}
             className="min-h-[42px] px-3 py-2 rounded-xl text-xs font-semibold text-cyan-300 bg-white/5 hover:bg-white/10 border border-cyan-500/30 flex items-center gap-1.5"
-            title="Ver mapa en vivo"
+            title="Ver simulación de ruta"
           >
             <Zap className="w-3.5 h-3.5 text-cyan-400" />
             <span className="hidden sm:inline">Mapa</span>

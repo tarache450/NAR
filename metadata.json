@@ -1,7 +1,7 @@
 {
-  "name": "Obsidian Kinetic",
-  "description": "High-performance executive peer-to-peer mobility, verified campus carpooling, and real-time kinetic telemetry.",
+  "name": "NAR — Viajes Compartidos",
+  "description": "Prototipo interactivo de viajes compartidos con rutas y perfiles de ejemplo en El Salvador.",
   "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+  "majorCapabilities": []
 }
 

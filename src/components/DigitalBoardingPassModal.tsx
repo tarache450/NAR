@@ -47,13 +47,13 @@ export const DigitalBoardingPassModal: React.FC<DigitalBoardingPassModalProps> =
         <div className="p-5 bg-[#0c0f17] border-b border-white/10 text-center">
           <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-[10px] font-mono font-bold text-emerald-400 mb-2">
             <ShieldCheck className="w-3.5 h-3.5" />
-            <span>PASE DE ABORDAJE VERIFICADO</span>
+            <span>PASE DE EJEMPLO · NO VERIFICABLE</span>
           </div>
           <h3 className="font-display font-extrabold text-lg text-white">
             NAR <span className="text-[#00c29a]">Digital Pass</span>
           </h3>
           <p className="text-xs text-slate-400">
-            Muestra este código al conductor al subirte
+            Este gráfico ilustra el pase; todavía no es un QR escaneable.
           </p>
         </div>
 

@@ -3,7 +3,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useRef } from 'react';
+import React, { lazy, Suspense, useState, useRef } from 'react';
+import './index.css';
 import { INITIAL_RIDES, POPULAR_ROUTES } from './data/mockData';
 import { Ride } from './types';
 import { Navbar } from './components/Navbar';
@@ -12,15 +13,16 @@ import { HeroSearch } from './components/HeroSearch';
 import { HowItWorksVisual } from './components/HowItWorksVisual';
 import { PopularRoutesSection } from './components/PopularRoutesSection';
 import { RideCard } from './components/RideCard';
-import { SearchView } from './components/SearchView';
-import { ProfileView } from './components/ProfileView';
+const SearchView = lazy(() => import('./components/SearchView').then((module) => ({ default: module.SearchView })));
+const ProfileView = lazy(() => import('./components/ProfileView').then((module) => ({ default: module.ProfileView })));
 import { TrustSafetySection } from './components/TrustSafetySection';
-import { LiveTelemetryView } from './components/LiveTelemetryView';
-import { RideDetailModal } from './components/RideDetailModal';
-import { PublishRideWizardModal } from './components/PublishRideWizardModal';
-import { DigitalBoardingPassModal } from './components/DigitalBoardingPassModal';
-import { RideChatModal } from './components/RideChatModal';
+const LiveTelemetryView = lazy(() => import('./components/LiveTelemetryView').then((module) => ({ default: module.LiveTelemetryView })));
+const RideDetailModal = lazy(() => import('./components/RideDetailModal').then((module) => ({ default: module.RideDetailModal })));
+const PublishRideWizardModal = lazy(() => import('./components/PublishRideWizardModal').then((module) => ({ default: module.PublishRideWizardModal })));
+const DigitalBoardingPassModal = lazy(() => import('./components/DigitalBoardingPassModal').then((module) => ({ default: module.DigitalBoardingPassModal })));
+const RideChatModal = lazy(() => import('./components/RideChatModal').then((module) => ({ default: module.RideChatModal })));
 import { Logo } from './components/Logo';
+import ClickSpark from './components/reactbits/ClickSpark';
 import { 
   Search, 
   MapPin, 
@@ -41,14 +43,13 @@ export default function App() {
   const [popularRoutes] = useState(POPULAR_ROUTES);
   
   // Navigation & View state
-  const [mode, setMode] = useState<'request' | 'offer'>('request');
   const [activeTab, setActiveTab] = useState<TabType>('explore');
   const [isMobileMockup, setIsMobileMockup] = useState<boolean>(false);
 
   // Search parameters
   const [origin, setOrigin] = useState('');
   const [destination, setDestination] = useState('');
-  const [selectedDate, setSelectedDate] = useState('hoy');
+  const [selectedDate, setSelectedDate] = useState('todos');
   const [passengers, setPassengers] = useState<number>(1);
   const [cityFilter, setCityFilter] = useState<string>('todos');
 
@@ -81,7 +82,8 @@ export default function App() {
   const handleSearch = () => {
     setActiveTab('explore');
     setTimeout(() => {
-      resultsRef.current?.scrollIntoView({ behavior: 'smooth' });
+      const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      resultsRef.current?.scrollIntoView({ behavior: reducedMotion ? 'auto' : 'smooth' });
     }, 100);
   };
 
@@ -93,7 +95,9 @@ export default function App() {
 
   // Filter rides based on search query
   const filteredRides = rides.filter(ride => {
-    const matchesOrigin = !origin.trim() || 
+    const matchesMetroOrigin = origin.trim().toLowerCase() === 'san salvador' &&
+      ['san salvador', 'antiguo cuscatlán', 'santa tecla'].includes(ride.origin.city.toLowerCase());
+    const matchesOrigin = !origin.trim() || matchesMetroOrigin ||
       ride.origin.name.toLowerCase().includes(origin.toLowerCase()) ||
       ride.origin.city.toLowerCase().includes(origin.toLowerCase());
 
@@ -107,8 +111,15 @@ export default function App() {
       ride.destination.city.toLowerCase().includes(cityFilter.toLowerCase());
 
     const hasEnoughSeats = ride.availableSeats >= passengers;
+    const matchesDate = selectedDate === 'todos' || (() => {
+      const date = new Date();
+      if (selectedDate === 'manana') date.setDate(date.getDate() + 1);
+      const localDate = [date.getFullYear(), String(date.getMonth() + 1).padStart(2, '0'), String(date.getDate()).padStart(2, '0')].join('-');
+      const label = selectedDate === 'hoy' ? 'hoy' : 'mañana';
+      return ride.date.toLowerCase().startsWith(label) || ride.date === localDate;
+    })();
 
-    return matchesOrigin && matchesDest && matchesCityFilter && hasEnoughSeats;
+    return matchesOrigin && matchesDest && matchesCityFilter && hasEnoughSeats && matchesDate;
   });
 
   const handleBookSuccess = (bookedRide: Ride, seatCount: number) => {
@@ -137,13 +148,17 @@ export default function App() {
     setPassSeatCount(seatCount);
     setPassRide(bookedRide);
     setActiveTelemetryRide(bookedRide);
-    showToast(`¡Asiento reservado con éxito! Tu código QR está listo.`);
+    showToast('Reserva de demostración creada. Tu pase de ejemplo está listo.');
   };
 
   const handlePublishSuccess = (newRide: Ride) => {
     setRides(prev => [newRide, ...prev]);
+    setOrigin('');
+    setDestination('');
+    setCityFilter('todos');
+    setSelectedDate('todos');
     setIsPublishWizardOpen(false);
-    showToast('¡Tu ruta ha sido publicada! Los pasajeros de la zona podrán verla.');
+    showToast('Ruta añadida a esta demostración. Se restablecerá al recargar.');
     setActiveTab('explore');
     handleSearch();
   };
@@ -173,13 +188,13 @@ export default function App() {
             />
 
             {/* Popular Routes 1-click exploration */}
-            <PopularRoutesSection
-              routes={popularRoutes}
-              onSelectRoute={handleSelectPopularRoute}
-            />
+              <PopularRoutesSection
+                routes={popularRoutes}
+                onSelectRoute={handleSelectPopularRoute}
+              />
 
             {/* Visual 3 Steps - No text overload */}
-            <HowItWorksVisual />
+              <HowItWorksVisual />
 
             {/* Available Rides Section with Results */}
             <section ref={resultsRef} className="pt-4 scroll-mt-20">
@@ -195,7 +210,7 @@ export default function App() {
                       Conductores que ya van por tu camino
                     </h2>
                     <p className="text-xs sm:text-sm text-slate-400 mt-1">
-                      Aprovecha asientos en trayectos existentes y viaja sin desvíos de taxi ni paradas de bus
+                      Explora rutas y perfiles de ejemplo para descubrir cómo funcionaría NAR.
                     </p>
                   </div>
 
@@ -315,11 +330,6 @@ export default function App() {
 
       {/* Top Navbar */}
       <Navbar
-        mode={mode}
-        onModeChange={(m) => {
-          setMode(m);
-          if (m === 'offer') setIsPublishWizardOpen(true);
-        }}
         activeView={activeTab}
         onViewChange={(tab) => {
           if (tab === 'publish') {
@@ -335,6 +345,7 @@ export default function App() {
 
       {/* Main Body */}
       <main className="flex-1 w-full">
+        <Suspense fallback={<p className="nar-container py-12" role="status">Cargando vista…</p>}>
         {isMobileMockup ? (
           /* Phone Frame Mockup View (Ref 1 & 2 Style) */
           <div className="flex flex-col items-center justify-center my-4 px-2">
@@ -404,7 +415,7 @@ export default function App() {
                   }`}
                 >
                   <Radio className="w-4 h-4" />
-                  <span>En Vivo</span>
+                  <span>Ruta demo</span>
                 </button>
 
                 <button
@@ -427,6 +438,7 @@ export default function App() {
             {renderContent()}
           </div>
         )}
+        </Suspense>
       </main>
 
       {/* Floating Bottom Nav for Real Mobile Devices (< 768px) */}
@@ -440,11 +452,11 @@ export default function App() {
               setActiveTab(tab);
             }
           }}
-          hasActiveTrip={activeTelemetryRide.status === 'in_progress'}
         />
       )}
 
       {/* Ride Detail & Booking Modal */}
+      <Suspense fallback={null}>
       {detailRide && (
         <RideDetailModal
           ride={detailRide}
@@ -481,6 +493,7 @@ export default function App() {
           onClose={() => setChatRide(null)}
         />
       )}
+      </Suspense>
 
       {/* Footer */}
       <footer className="border-t border-white/10 py-10 px-4 sm:px-6 lg:px-8 bg-[#090c13] text-xs text-slate-400 mt-16 mb-16 md:mb-0">
@@ -491,11 +504,11 @@ export default function App() {
             <span className="text-slate-400">NAR · Red de viajes compartidos en El Salvador</span>
           </div>
           <div className="flex items-center gap-4 text-[11px] font-mono text-slate-400 flex-wrap justify-center">
-            <span className="text-emerald-400">✓ DUI Verificado</span>
+            <span className="text-emerald-400">Prototipo interactivo</span>
             <span>·</span>
-            <span className="text-cyan-300">Aporte Justo en USD</span>
+            <span className="text-cyan-300">Rutas y perfiles de ejemplo</span>
             <span>·</span>
-            <span>Carretera Los Chorros & Panamericana</span>
+            <span>Hecho para explorar NAR</span>
           </div>
         </div>
       </footer>

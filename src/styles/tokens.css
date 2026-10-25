@@ -1,0 +1,45 @@
+:root {
+  color-scheme: dark;
+  --font-display: 'Manrope', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-body: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+
+  /* Verified in the existing logo and UI. */
+  --color-primary: #00c29a;
+  --color-primary-hover: #00deb0;
+  --color-secondary: #2563eb;
+  --color-secondary-hover: #1d4ed8;
+  --color-accent: #22d3ee;
+  --color-background: #0c1017;
+  --color-surface: #131722;
+  --color-surface-hover: #181e2b;
+  --color-surface-elevated: #1c2233;
+  --color-text: #f8fafc;
+  --color-text-secondary: #aab9c7;
+  --color-text-muted: #8595a6;
+  --color-border: rgba(255, 255, 255, 0.11);
+  --color-border-hover: rgba(0, 194, 154, 0.42);
+  --color-success: #10b981;
+  --color-warning: #f59e0b;
+  --color-error: #f43f5e;
+
+  /* Provisional additions for the new search surface. */
+  --color-hero: #07151c;
+  --color-hero-surface: #10232b;
+  --color-paper: #f4f8f6;
+  --color-ink: #102720;
+  --color-paper-border: #cbd8d1;
+
+  --space-1: 0.5rem;
+  --space-2: 0.75rem;
+  --space-3: 1rem;
+  --space-4: 1.5rem;
+  --space-5: 2rem;
+  --space-6: 3rem;
+  --space-7: 4.5rem;
+  --radius-control: 0.75rem;
+  --radius-panel: 1.25rem;
+  --shadow-panel: 0 24px 56px rgba(0, 0, 0, 0.24);
+  --motion-fast: 180ms;
+  --motion-standard: 280ms;
+  --motion-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
