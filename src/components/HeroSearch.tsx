@@ -2,6 +2,8 @@ import React, { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import Magnet from './reactbits/Magnet';
 import RubberSegmentSource from './reactbits/RubberSegment';
 import BorderGlowSource from './reactbits/BorderGlow';
+import StarBorder from './reactbits/StarBorder';
+import FoldText from './reactbits/FoldText';
 import { useReducedMotion } from 'motion/react';
 import { ArrowRightLeft, MapPin, Search, Users, CarFront, Sparkles, ShieldCheck } from 'lucide-react';
 
@@ -36,7 +38,22 @@ export const HeroSearch: React.FC<HeroSearchProps> = ({ origin, destination, onO
     <div className="nar-hero-grid" aria-hidden="true" />
     <div className="nar-hero-inner">
       <div className="nar-hero-copy">
-        <span className="nar-eyebrow"><span className="nar-live-dot" /> MOVILIDAD COMPARTIDA · EL SALVADOR</span>
+        <span className="nar-eyebrow">
+          <span className="nar-live-dot" /> 
+          {reduceMotion ? (
+            <span>MOVILIDAD COMPARTIDA · EL SALVADOR</span>
+          ) : (
+            <FoldText 
+              text="MOVILIDAD COMPARTIDA · EL SALVADOR" 
+              splitBy="char" 
+              hinge="bottom" 
+              duration={0.9} 
+              color="#9cb3ff" 
+              fontSize="0.68rem" 
+              fontWeight={750} 
+            />
+          )}
+        </span>
         <h1>Tu camino.<br/><span className="nar-stroke-line">{reduceMotion ? <span>Nuestra ruta.</span> : <Suspense fallback={<span>Nuestra ruta.</span>}><StrokeText text="Nuestra ruta." strokeColor="#9cb3ff" fillColor="#9cb3ff" fontSize={96} drawDuration={1.1} stagger={0.035} hoverRedraw={false} /></Suspense>}</span></h1>
         <p>Encuentra a alguien que ya va para allá. Comparte el viaje, divide la gasolina y llega acompañado.</p>
         <div className="nar-proof"><span><ShieldCheck size={16}/> Perfiles verificados</span><i/><span><Users size={16}/> Gastos compartidos</span></div>
@@ -52,7 +69,13 @@ export const HeroSearch: React.FC<HeroSearchProps> = ({ origin, destination, onO
         <div className="nar-search-options"><div className="nar-date-block"><span className="nar-kicker">¿CUÁNDO?</span><div className="nar-date-list">{dates.map(d => <button type="button" key={d.value} className={selectedDate === d.value ? 'nar-date active' : 'nar-date'} onClick={() => onDateChange(d.value)}><small>{d.label}</small><b>{d.day}</b></button>)}</div></div>
           <div className="nar-seat-block"><span className="nar-kicker">ASIENTOS</span><RubberSegment items={[{value:1,label:'1'},{value:2,label:'2'},{value:3,label:'3'}]} value={passengers} onChange={onPassengersChange} size="lg" trackColor="#080b10" thumbColor="#315cff" textColor="#c4c5d9" activeTextColor="#fff" aria-label="Cantidad de asientos" /></div>
         </div>
-        <Magnet style={{ width: '100%' }} magnetStrength={0.18}><button className="nar-primary" type="submit"><Search size={18}/> Encontrar mi viaje <span>→</span></button></Magnet>
+        <Magnet style={{ width: '100%' }} magnetStrength={0.18}>
+          <StarBorder as="div" color="#315cff" trailColor="#0c1017" radius={14} thickness={1.5} duration={5} className="w-full">
+            <button className="nar-primary !bg-transparent !shadow-none" type="submit">
+              <Search size={18}/> Encontrar mi viaje <span>→</span>
+            </button>
+          </StarBorder>
+        </Magnet>
         <button className="nar-offer" type="button" onClick={onOpenPublish}><Sparkles size={15}/> ¿Tienes espacio? <b>Ofrece un asiento</b></button>
       </form>
       </BorderGlow>
