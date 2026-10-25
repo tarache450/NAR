@@ -1,0 +1,54 @@
+name: Sync NAR project state
+
+on:
+  workflow_dispatch:
+    inputs:
+      target-branch:
+        description: 'Rama a la que se deja el estado actual del proyecto'
+        required: false
+        default: 'main'
+
+# Genera credenciales de escritura para `git push` dentro del workflow.
+permissions:
+  contents: write
+
+jobs:
+  deploy-current-state:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Configure Git identity
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Determine target branch
+        id: branch
+        run: |
+          TARGET="${{ github.event.inputs.target-branch }}"
+          if [ -z "$TARGET" ]; then
+            TARGET="main"
+          fi
+          echo "target=${TARGET}" >> $GITHUB_OUTPUT
+
+      - name: Sync current state (stage -> commit -> push)
+        run: |
+          cd "$GITHUB_WORKSPACE"
+          git checkout -B "${{ steps.branch.outputs.target }}"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No hay cambios pendientes para sincronizar."
+            exit 0
+          fi
+          git commit -m "chore: auto-sync NAR — estado actual de la rama ${{ steps.branch.outputs.target }} [$(date +%Y-%m-%d)]"
+          git push origin "${{ steps.branch.outputs.target }}"
+
+      - name: Summary
+        run: |
+          echo "✅ Estado actual sincronizado en: ${{ steps.branch.outputs.target }}"
+          echo "🏗️ Repositorio: https://github.com/${{ github.repository }}"
