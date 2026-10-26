@@ -1,7 +1,7 @@
 import React from 'react';
 import SpotlightCard from './reactbits/SpotlightCard';
 import { RoutePopular } from '../types';
-import { ArrowRight, Clock, MapPin, Users } from 'lucide-react';
+import { ArrowRight, Clock, MapPin } from 'lucide-react';
 
 interface PopularRoutesSectionProps {
   routes: RoutePopular[];
@@ -43,53 +43,39 @@ export const PopularRoutesSection: React.FC<PopularRoutesSectionProps> = ({
               className="group nar-route-card cursor-pointer flex flex-col justify-between"
               style={{ '--route-index': index } as React.CSSProperties}
             >
-              {/* Photo Banner with overlay */}
-              <div className="relative h-32 w-full overflow-hidden bg-slate-900">
+              {/* Route artwork */}
+              <div className="nar-route-card__cover">
                 <img 
                   src={rt.image} 
-                  alt={`${rt.origin} a ${rt.destination}`}
+                  alt=""
+                  aria-hidden="true"
                   loading="lazy"
                   decoding="async"
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 opacity-70"
+                  className="nar-route-card__image"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-[#131722] via-transparent to-transparent" />
-                
-                {/* Price Tag Pill */}
-                <div className="absolute top-3 right-3 bg-[#0c0f17]/90 border border-white/10 px-2.5 py-1 rounded-xl shadow-lg">
-                    <span className="text-[10px] text-slate-400 block font-mono">Aporte de ejemplo</span>
-                  <span className="text-xs font-extrabold text-[#c4cfff] font-display">
-                    ${rt.avgPrice.toFixed(2)} USD
-                  </span>
+                <div className="nar-route-card__shade" />
+                <div className="nar-route-card__cover-top">
+                  <span>RUTA DE EJEMPLO</span>
+                  <span className="nar-route-card__price">${rt.avgPrice.toFixed(2)} <small>USD</small></span>
                 </div>
-
-                <div className="absolute bottom-2 left-3">
-                  <span className="text-[11px] font-mono text-slate-300 bg-black/60 px-2 py-0.5 rounded-md backdrop-blur-sm">
-                    Duración de referencia · {rt.travelTime}
-                  </span>
+                <div className="nar-route-card__visual" aria-hidden="true">
+                  <span className="nar-route-card__city">{rt.origin}</span>
+                  <span className="nar-route-card__line"><i /><i /><i /></span>
+                  <span className="nar-route-card__city is-destination">{rt.destination}</span>
                 </div>
               </div>
 
-              {/* Text content */}
-              <div className="p-4 flex-1 flex flex-col justify-between">
-                <div>
-                  <h3 className="text-sm sm:text-base font-bold text-white group-hover:text-[#c4cfff] transition-colors flex items-center gap-1.5">
-                    <span>{rt.origin}</span>
-                    <ArrowRight className="w-3.5 h-3.5 text-[#9cb3ff]" />
-                    <span>{rt.destination}</span>
-                  </h3>
-                  
-                  <p className="text-[11px] text-slate-400 mt-1 line-clamp-2">
-                    {rt.intermediate}
-                  </p>
+              <div className="nar-route-card__body">
+                <div className="nar-route-card__stops">
+                  <MapPin size={14} aria-hidden="true" />
+                  <div>
+                    <span>PARADAS ORIENTATIVAS</span>
+                    <p>{rt.intermediate}</p>
+                  </div>
                 </div>
-
-                <div className="pt-3 mt-3 border-t border-white/5 flex items-center justify-between text-xs">
-                  <span className="text-[11px] font-mono text-slate-400">
-                    Trayecto ilustrativo
-                  </span>
-                  <span className="text-[#9cb3ff] font-bold group-hover:translate-x-1 transition-transform inline-flex items-center gap-1">
-                    Ver →
-                  </span>
+                <div className="nar-route-card__footer">
+                  <span><Clock size={13} aria-hidden="true" /> {rt.travelTime}</span>
+                  <span>Explorar <ArrowRight size={14} aria-hidden="true" /></span>
                 </div>
               </div>
 

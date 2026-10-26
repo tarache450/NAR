@@ -1,7 +1,7 @@
 import React, { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import RubberSegmentSource from './reactbits/RubberSegment';
 import BorderGlowSource from './reactbits/BorderGlow';
-import { ArrowRightLeft, MapPin, Search, Users, CarFront, Sparkles } from 'lucide-react';
+import { ArrowRightLeft, MapPin, Search, Users, Route, Sparkles } from 'lucide-react';
 
 const FloatingLines = lazy(() => import('./reactbits/FloatingLines').then(m => ({ default: m.default as React.ComponentType<any> })));
 const StrokeText = lazy(() => import('./reactbits/StrokeText').then(m => ({ default: m.default as React.ComponentType<any> })));
@@ -51,7 +51,7 @@ export const HeroSearch: React.FC<HeroSearchProps> = ({ origin, destination, onO
       </div>
       <BorderGlow className="nar-search-glow" backgroundColor="#111827" glowColor="225 100 60" colors={['#315cff','#00a89d','#9cb3ff']} borderRadius={24} glowIntensity={0.35}>
       <form className="nar-search" onSubmit={e => { e.preventDefault(); onSearch(); }}>
-        <div className="nar-search-title"><div><span className="nar-kicker">EMPIEZA POR TU DESTINO</span><h2>¿A dónde vas?</h2></div><span className="nar-search-icon"><CarFront size={21}/></span></div>
+        <div className="nar-search-title"><div><span className="nar-kicker">PLANIFICA TU RECORRIDO</span><h2>¿A dónde vas?</h2><p>Elige origen, destino y fecha.</p></div><span className="nar-search-icon"><Route size={21}/></span></div>
         <div className="nar-route-fields">
           <label className="nar-field"><span className="nar-origin-dot"/><span><small>DESDE</small><input value={origin} onChange={e => onOriginChange(e.target.value)} placeholder="Ciudad de salida" aria-label="Ciudad de salida"/></span></label>
           <button type="button" className="nar-swap" onClick={onSwapLocations} aria-label="Intercambiar origen y destino"><ArrowRightLeft size={17}/></button>
