@@ -25,7 +25,7 @@ export const Logo: React.FC<LogoProps> = ({
       {/* Official NAR Kinetic Logo Mark */}
       <div className={`relative ${icon} shrink-0 aspect-square rounded-2xl overflow-hidden shadow-lg shadow-blue-600/20 ring-1 ring-white/10`}>
         <img 
-          src="/logo.svg" 
+          src={`${import.meta.env.BASE_URL}logo.svg`}
           alt="NAR Logo" 
           className="w-full h-full object-cover" 
           width={512}

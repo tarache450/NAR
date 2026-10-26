@@ -36,7 +36,7 @@ export const HeroSearch: React.FC<HeroSearchProps> = ({ origin, destination, onO
   }), []);
 
   return <section className="nar-hero">
-    <img className="nar-hero-photo" src={`${import.meta.env.BASE_URL}images/nar-road-editorial.webp`} alt="" aria-hidden="true" fetchPriority="high" />
+    <img className="nar-hero-photo" src={`${import.meta.env.BASE_URL}images/nar-road-editorial.webp`} srcSet={`${import.meta.env.BASE_URL}images/nar-road-editorial-640.webp 640w, ${import.meta.env.BASE_URL}images/nar-road-editorial-1280.webp 1280w, ${import.meta.env.BASE_URL}images/nar-road-editorial.webp 1536w`} sizes="100vw" alt="" aria-hidden="true" fetchPriority="high" />
     {!reduceMotion && wideScreen && <Suspense fallback={null}><FloatingLines className="nar-floating-lines" linesGradient={['#315cff', '#00a89d', '#9cb3ff']} enabledWaves={['middle', 'bottom']} lineCount={5} animationSpeed={0.35} amplitude={0.4} interactive={false} parallax={false} clickSwirl={false} opacity={0.36} /></Suspense>}
     <div className="nar-hero-grid" aria-hidden="true" />
     <div className="nar-hero-inner">

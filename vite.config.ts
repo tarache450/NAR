@@ -3,9 +3,14 @@ import react from '@vitejs/plugin-react';
 import path from 'path';
 import {defineConfig} from 'vite';
 
+const configuredBase = process.env.NAR_BASE_PATH
+  || (process.env.SITE_URL ? new URL(process.env.SITE_URL).pathname : '/NAR/');
+const absoluteBase = configuredBase.startsWith('/') ? configuredBase : `/${configuredBase}`;
+const productionBase = `${absoluteBase.replace(/\/+$/, '')}/`;
+
 export default defineConfig(() => {
   return {
-    base: process.env.NODE_ENV === 'production' ? '/NAR/' : '/',
+    base: process.env.NODE_ENV === 'production' ? productionBase : '/',
     plugins: [react(), tailwindcss()],
     resolve: {
       alias: {

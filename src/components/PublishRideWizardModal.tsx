@@ -83,7 +83,7 @@ export const PublishRideWizardModal: React.FC<PublishRideWizardModalProps> = ({
         name: 'Conductor de ejemplo',
         role: 'Perfil ilustrativo',
         affiliation: 'NAR · demostración',
-        avatar: '/logo.svg',
+        avatar: `${import.meta.env.BASE_URL}logo.svg`,
         rating: 0,
         totalTrips: 0,
         verifiedDUI: false,
