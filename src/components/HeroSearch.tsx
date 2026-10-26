@@ -1,11 +1,7 @@
 import React, { lazy, Suspense, useEffect, useMemo, useState } from 'react';
-import Magnet from './reactbits/Magnet';
 import RubberSegmentSource from './reactbits/RubberSegment';
 import BorderGlowSource from './reactbits/BorderGlow';
-import StarBorder from './reactbits/StarBorder';
-import FoldText from './reactbits/FoldText';
-import { useReducedMotion } from 'motion/react';
-import { ArrowRightLeft, MapPin, Search, Users, CarFront, Sparkles, ShieldCheck } from 'lucide-react';
+import { ArrowRightLeft, MapPin, Search, Users, CarFront, Sparkles } from 'lucide-react';
 
 const FloatingLines = lazy(() => import('./reactbits/FloatingLines').then(m => ({ default: m.default as React.ComponentType<any> })));
 const StrokeText = lazy(() => import('./reactbits/StrokeText').then(m => ({ default: m.default as React.ComponentType<any> })));
@@ -19,11 +15,17 @@ interface HeroSearchProps {
 }
 
 export const HeroSearch: React.FC<HeroSearchProps> = ({ origin, destination, onOriginChange, onDestinationChange, onSwapLocations, selectedDate, onDateChange, passengers, onPassengersChange, onSearch, onOpenPublish }) => {
-  const reduceMotion = useReducedMotion();
+  const [reduceMotion, setReduceMotion] = useState(() => typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
   const [wideScreen, setWideScreen] = useState(() => typeof window !== 'undefined' && window.matchMedia('(min-width: 801px)').matches);
   useEffect(() => {
     const query = window.matchMedia('(min-width: 801px)');
     const update = () => setWideScreen(query.matches);
+    query.addEventListener('change', update);
+    return () => query.removeEventListener('change', update);
+  }, []);
+  useEffect(() => {
+    const query = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const update = () => setReduceMotion(query.matches);
     query.addEventListener('change', update);
     return () => query.removeEventListener('change', update);
   }, []);
@@ -34,29 +36,18 @@ export const HeroSearch: React.FC<HeroSearchProps> = ({ origin, destination, onO
   }), []);
 
   return <section className="nar-hero">
+    <img className="nar-hero-photo" src={`${import.meta.env.BASE_URL}images/nar-road-editorial.webp`} alt="" aria-hidden="true" fetchPriority="high" />
     {!reduceMotion && wideScreen && <Suspense fallback={null}><FloatingLines className="nar-floating-lines" linesGradient={['#315cff', '#00a89d', '#9cb3ff']} enabledWaves={['middle', 'bottom']} lineCount={5} animationSpeed={0.35} amplitude={0.4} interactive={false} parallax={false} clickSwirl={false} opacity={0.36} /></Suspense>}
     <div className="nar-hero-grid" aria-hidden="true" />
     <div className="nar-hero-inner">
       <div className="nar-hero-copy">
         <span className="nar-eyebrow">
           <span className="nar-live-dot" /> 
-          {reduceMotion ? (
-            <span>MOVILIDAD COMPARTIDA · EL SALVADOR</span>
-          ) : (
-            <FoldText 
-              text="MOVILIDAD COMPARTIDA · EL SALVADOR" 
-              splitBy="char" 
-              hinge="bottom" 
-              duration={0.9} 
-              color="#9cb3ff" 
-              fontSize="0.68rem" 
-              fontWeight={750} 
-            />
-          )}
+          <span>MOVILIDAD COMPARTIDA · EL SALVADOR</span>
         </span>
         <h1>Tu camino.<br/><span className="nar-stroke-line">{reduceMotion ? <span>Nuestra ruta.</span> : <Suspense fallback={<span>Nuestra ruta.</span>}><StrokeText text="Nuestra ruta." strokeColor="#9cb3ff" fillColor="#9cb3ff" fontSize={96} drawDuration={1.1} stagger={0.035} hoverRedraw={false} /></Suspense>}</span></h1>
-        <p>Encuentra a alguien que ya va para allá. Comparte el viaje, divide la gasolina y llega acompañado.</p>
-        <div className="nar-proof"><span><ShieldCheck size={16}/> Perfiles verificados</span><i/><span><Users size={16}/> Gastos compartidos</span></div>
+        <p>Explora rutas de ejemplo en El Salvador, revisa cada parada y calcula el trayecto en Google Maps.</p>
+        <div className="nar-proof"><span><MapPin size={16}/> Rutas de ejemplo</span><i/><span><Users size={16}/> Gastos compartidos directamente</span></div>
       </div>
       <BorderGlow className="nar-search-glow" backgroundColor="#111827" glowColor="225 100 60" colors={['#315cff','#00a89d','#9cb3ff']} borderRadius={24} glowIntensity={0.35}>
       <form className="nar-search" onSubmit={e => { e.preventDefault(); onSearch(); }}>
@@ -69,13 +60,9 @@ export const HeroSearch: React.FC<HeroSearchProps> = ({ origin, destination, onO
         <div className="nar-search-options"><div className="nar-date-block"><span className="nar-kicker">¿CUÁNDO?</span><div className="nar-date-list">{dates.map(d => <button type="button" key={d.value} className={selectedDate === d.value ? 'nar-date active' : 'nar-date'} onClick={() => onDateChange(d.value)}><small>{d.label}</small><b>{d.day}</b></button>)}</div></div>
           <div className="nar-seat-block"><span className="nar-kicker">ASIENTOS</span><RubberSegment items={[{value:1,label:'1'},{value:2,label:'2'},{value:3,label:'3'}]} value={passengers} onChange={onPassengersChange} size="lg" trackColor="#080b10" thumbColor="#315cff" textColor="#c4c5d9" activeTextColor="#fff" aria-label="Cantidad de asientos" /></div>
         </div>
-        <Magnet style={{ width: '100%' }} magnetStrength={0.18}>
-          <StarBorder as="div" color="#315cff" trailColor="#0c1017" radius={14} thickness={1.5} duration={5} className="w-full">
-            <button className="nar-primary !bg-transparent !shadow-none" type="submit">
-              <Search size={18}/> Encontrar mi viaje <span>→</span>
-            </button>
-          </StarBorder>
-        </Magnet>
+        <button className="nar-primary" type="submit">
+          <Search size={18}/> Encontrar mi viaje <span aria-hidden="true">→</span>
+        </button>
         <button className="nar-offer" type="button" onClick={onOpenPublish}><Sparkles size={15}/> ¿Tienes espacio? <b>Ofrece un asiento</b></button>
       </form>
       </BorderGlow>

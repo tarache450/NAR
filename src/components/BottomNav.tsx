@@ -3,7 +3,7 @@ import {
   Compass, 
   Search, 
   PlusCircle, 
-  Radio, 
+  Route,
   UserCheck 
 } from 'lucide-react';
 
@@ -31,6 +31,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
         <button
           type="button"
           onClick={() => onTabChange('explore')}
+          aria-current={activeTab === 'explore' ? 'page' : undefined}
           className={`min-h-[48px] flex flex-col items-center justify-center gap-1 transition-all ${
             activeTab === 'explore'
               ? 'text-[#9cb3ff] font-bold'
@@ -45,6 +46,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
         <button
           type="button"
           onClick={() => onTabChange('search')}
+          aria-current={activeTab === 'search' ? 'page' : undefined}
           className={`min-h-[48px] flex flex-col items-center justify-center gap-1 transition-all ${
             activeTab === 'search'
               ? 'text-[#9cb3ff] font-bold'
@@ -76,6 +78,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
         <button
           type="button"
           onClick={() => onTabChange('telemetry')}
+          aria-current={activeTab === 'telemetry' ? 'page' : undefined}
           className={`min-h-[48px] flex flex-col items-center justify-center gap-1 relative transition-all ${
             activeTab === 'telemetry'
               ? 'text-[#9cb3ff] font-bold'
@@ -83,18 +86,19 @@ export const BottomNav: React.FC<BottomNavProps> = ({
           }`}
         >
           <div className="relative">
-            <Radio className="w-5 h-5" />
+            <Route className="w-5 h-5" />
             {hasActiveTrip && (
               <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-[#315cff] animate-ping" />
             )}
           </div>
-          <span className="text-[10px] tracking-tight leading-none">En Vivo</span>
+          <span className="text-[10px] tracking-tight leading-none">Recorrido</span>
         </button>
 
         {/* Tab 5: Perfil / Seguridad */}
         <button
           type="button"
           onClick={() => onTabChange('profile')}
+          aria-current={activeTab === 'profile' ? 'page' : undefined}
           className={`min-h-[48px] flex flex-col items-center justify-center gap-1 transition-all ${
             activeTab === 'profile'
               ? 'text-emerald-400 font-bold'

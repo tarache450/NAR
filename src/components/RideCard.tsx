@@ -2,13 +2,9 @@ import React from 'react';
 import { Ride } from '../types';
 import { 
   Users, 
-  ShieldCheck, 
   Clock, 
   MapPin, 
-  Zap, 
   ArrowRight, 
-  Star,
-  CheckCircle2,
   Calendar
 } from 'lucide-react';
 
@@ -27,8 +23,7 @@ export const RideCard: React.FC<RideCardProps> = ({
   
   return (
     <article 
-      onClick={() => onSelect(ride)}
-      className="group relative bg-[#131722] hover:bg-[#181d2b] border border-white/10 hover:border-[#315cff]/40 rounded-3xl p-5 sm:p-6 transition-all duration-300 flex flex-col justify-between shadow-xl shadow-black/40 cursor-pointer"
+      className="group relative bg-[#131722] hover:bg-[#181d2b] border border-white/10 hover:border-[#315cff]/40 rounded-3xl p-5 sm:p-6 transition-all duration-300 flex flex-col justify-between shadow-xl shadow-black/40"
     >
       <div>
         
@@ -120,25 +115,19 @@ export const RideCard: React.FC<RideCardProps> = ({
               <img 
                 src={ride.driver.avatar} 
                 alt={ride.driver.name} 
+                loading="lazy"
+                decoding="async"
                 className="w-10 h-10 rounded-2xl object-cover border border-white/20 group-hover:border-[#315cff] transition-colors"
               />
-              {ride.driver.verifiedDUI && (
-                <div 
-                  className="absolute -bottom-1 -right-1 w-4 h-4 bg-emerald-500 text-white rounded-full flex items-center justify-center text-[9px] font-bold border-2 border-[#131722]"
-                  title="DUI & Teléfono Verificados"
-                >
-                  ✓
-                </div>
-              )}
             </div>
 
             <div>
               <div className="flex items-center gap-1.5">
                 <span className="text-xs sm:text-sm font-bold text-white group-hover:text-[#c4cfff] transition-colors">
-                  {ride.driver.name}
+                  Conductor de ejemplo
                 </span>
-                <span className="text-[11px] font-semibold text-yellow-400 flex items-center">
-                  ★ {ride.driver.rating.toFixed(1)}
+                <span className="text-[10px] font-medium text-slate-400">
+                  Perfil de ejemplo
                 </span>
               </div>
               <span className="text-[11px] text-slate-400 block">
@@ -156,12 +145,6 @@ export const RideCard: React.FC<RideCardProps> = ({
             }`}>
               {ride.availableSeats} {ride.availableSeats === 1 ? 'plaza restante' : 'plazas libres'}
             </span>
-            {isLive && (
-              <span className="flex items-center justify-end gap-1 text-[10px] font-mono text-[#9cb3ff] mt-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#315cff] animate-ping" />
-                En ruta ahora
-              </span>
-            )}
           </div>
 
         </div>
@@ -176,11 +159,6 @@ export const RideCard: React.FC<RideCardProps> = ({
               {amenity}
             </span>
           ))}
-          {ride.isRecurring && (
-            <span className="text-[10px] text-[#c4cfff] bg-[#315cff]/10 border border-cyan-500/30 px-2 py-0.5 rounded-lg font-mono">
-              Recurrente ({ride.recurringDays})
-            </span>
-          )}
         </div>
 
       </div>
@@ -195,7 +173,7 @@ export const RideCard: React.FC<RideCardProps> = ({
           }}
           className="flex-1 min-h-[42px] py-2 px-4 rounded-xl text-xs sm:text-sm font-bold text-slate-950 bg-gradient-to-r from-[#315cff] to-[#00a89d] hover:from-[#4d77ff] hover:to-[#22c4b7] shadow-md shadow-[#315cff]/15 flex items-center justify-center gap-2 transition-all transform active:scale-98"
         >
-          <span>Ver Ruta & Reservar Asiento</span>
+          <span>Ver detalles de ejemplo</span>
           <ArrowRight className="w-4 h-4" />
         </button>
 
@@ -207,9 +185,9 @@ export const RideCard: React.FC<RideCardProps> = ({
               onOpenLiveTelemetry(ride);
             }}
             className="min-h-[42px] px-3 py-2 rounded-xl text-xs font-semibold text-[#c4cfff] bg-white/5 hover:bg-white/10 border border-cyan-500/30 flex items-center gap-1.5"
-            title="Ver mapa en vivo"
+            title="Ver recorrido de ejemplo"
           >
-            <Zap className="w-3.5 h-3.5 text-[#9cb3ff]" />
+            <MapPin className="w-3.5 h-3.5 text-[#9cb3ff]" />
             <span className="hidden sm:inline">Mapa</span>
           </button>
         )}

@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import { AvatarGroupHover } from './AvatarGroupHover';
-import PeekRatingSource from './reactbits/PeekRating';
-const PeekRating = PeekRatingSource as React.ComponentType<any>;
 import { Ride } from '../types';
+import { googleMapsDirectionsUrl } from '../lib/maps';
 import { 
   X, 
   ShieldCheck, 
@@ -24,19 +23,18 @@ interface RideDetailModalProps {
   ride: Ride;
   onClose: () => void;
   onBookSuccess: (ride: Ride, seatNumber: number) => void;
-  onOpenLiveView: (ride: Ride) => void;
 }
 
 export const RideDetailModal: React.FC<RideDetailModalProps> = ({
   ride,
   onClose,
   onBookSuccess,
-  onOpenLiveView,
 }) => {
   const [selectedSeatCount, setSelectedSeatCount] = useState<number>(1);
   const [isBooking, setIsBooking] = useState<boolean>(false);
 
   const totalPrice = ride.seatPrice * selectedSeatCount;
+  const mapsUrl = googleMapsDirectionsUrl(ride);
 
   const handleConfirm = () => {
     setIsBooking(true);
@@ -65,33 +63,27 @@ export const RideDetailModal: React.FC<RideDetailModalProps> = ({
             {/* Driver Profile */}
             <div className="flex items-center gap-3.5">
               <div className="relative">
-                <img 
-                  src={ride.driver.avatar} 
-                  alt={ride.driver.name} 
+                <img
+                  src={ride.driver.avatar}
+                  alt=""
+                  loading="lazy"
+                  decoding="async"
                   className="w-14 h-14 rounded-2xl object-cover border-2 border-[#315cff]/40 shadow-lg shadow-[#315cff]/10"
                 />
-                <div 
-                  className="absolute -bottom-1 -right-1 w-5 h-5 bg-emerald-500 text-white rounded-full flex items-center justify-center text-[10px] font-bold border-2 border-[#131722]"
-                  title="Identidad DUI Verificada"
-                >
-                  ✓
-                </div>
               </div>
 
               <div>
                 <div className="flex items-center gap-2">
                   <h2 className="text-base sm:text-lg font-display font-extrabold text-white">
-                    {ride.driver.name}
+                    Conductor de ejemplo
                   </h2>
-                  <span className="text-xs font-bold text-yellow-400 bg-yellow-400/10 px-2 py-0.5 rounded-lg border border-yellow-400/20">{ride.driver.rating.toFixed(2)} / 5</span>
+                  <span className="text-[10px] font-medium text-slate-400 bg-white/5 px-2 py-0.5 rounded-lg">Perfil de ejemplo</span>
                 </div>
                 <p className="text-xs text-slate-400 mt-0.5">
                   Conduce un <strong className="text-white">{ride.vehicle.make} {ride.vehicle.model}</strong> ({ride.vehicle.color})
                 </p>
-                <PeekRating value={Math.round(ride.driver.rating)} size={18} readOnly activeColor="#9cb3ff" ariaLabel={`Valoración de ${ride.driver.name}: ${ride.driver.rating.toFixed(2)} de 5`} />
                 <div className="flex items-center gap-2 text-[11px] text-emerald-400 mt-1 font-medium">
-                  <ShieldCheck className="w-3.5 h-3.5" />
-                  <span>DUI y Teléfono salvadoreño verificados</span>
+                  <span className="text-slate-400">Vehículo y datos ilustrativos</span>
                 </div>
               </div>
             </div>
@@ -167,10 +159,10 @@ export const RideDetailModal: React.FC<RideDetailModalProps> = ({
             </div>
           </div>
 
-          {/* Co-passengers for today (Ref 1 Style) */}
+            {/* Sample passenger data */}
           <div>
             <span className="text-xs font-mono uppercase font-bold tracking-wider text-slate-400 block mb-2.5">
-              Compañeros de viaje confirmados ({ride.passengers.length}/{ride.totalSeats})
+              Pasajeros de ejemplo ({ride.passengers.length}/{ride.totalSeats})
             </span>
 
             {ride.passengers.length > 0 ? (
@@ -183,7 +175,7 @@ export const RideDetailModal: React.FC<RideDetailModalProps> = ({
                       className="w-7 h-7 rounded-lg object-cover"
                     />
                     <div className="text-left pr-2">
-                      <span className="text-xs font-bold text-white block">{pas.name.split(' ')[0]}</span>
+                      <span className="text-xs font-bold text-white block">Ejemplo</span>
                       <span className="text-[9px] text-slate-400 font-mono">Asiento {pas.seatNumber}</span>
                     </div>
                   </div>
@@ -191,32 +183,14 @@ export const RideDetailModal: React.FC<RideDetailModalProps> = ({
               </AvatarGroupHover>
             ) : (
               <p className="text-xs text-slate-500 italic p-2 bg-[#0c0f17] rounded-xl border border-white/5">
-                Aún no hay otros pasajeros. ¡Serás el primero en subir!
+                No hay pasajeros reales: esta lista pertenece a la demostración.
               </p>
             )}
           </div>
 
-          {/* Passenger Reviews (Ref 1 Style) */}
-          {ride.driver.reviews && ride.driver.reviews.length > 0 && (
-            <div>
-              <span className="text-xs font-mono uppercase font-bold tracking-wider text-slate-400 block mb-2.5">
-                Reseñas de otros pasajeros
-              </span>
-              <div className="space-y-2">
-                {ride.driver.reviews.map((rev) => (
-                  <div key={rev.id} className="p-3 rounded-xl bg-[#0c0f17] border border-white/5 text-xs">
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="font-bold text-white">{rev.authorName}</span>
-                      <span className="text-[10px] text-slate-500 font-mono">{rev.date}</span>
-                    </div>
-                    <p className="text-slate-300 text-[11px] leading-relaxed">
-                      "{rev.comment}"
-                    </p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+          <a href={mapsUrl} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-[#9cb3ff]/25 bg-[#315cff]/10 px-4 text-sm font-semibold text-[#c4cfff] hover:bg-[#315cff]/20"><MapPin className="h-4 w-4"/> Ver indicaciones en Google Maps</a>
+
+          <p className="rounded-xl border border-amber-300/20 bg-amber-300/[.06] p-3 text-xs leading-relaxed text-amber-100/90">Demostración: los datos, precios y asientos son ejemplos. Al continuar no se contactará al conductor ni se reservará un viaje real.</p>
 
           {/* Seat Selector (Ref 2 Style) */}
           <div className="p-3.5 rounded-2xl bg-[#0c0f17] border border-white/10 flex items-center justify-between">
@@ -248,7 +222,7 @@ export const RideDetailModal: React.FC<RideDetailModalProps> = ({
         {/* Modal Footer with Pricing & Sticky CTA */}
         <div className="p-4 sm:p-5 border-t border-white/10 bg-[#0c0f17] flex items-center justify-between gap-4">
           <div>
-            <span className="text-[10px] text-slate-400 uppercase font-mono block">Aporte Total Gasolina</span>
+            <span className="text-[10px] text-slate-400 uppercase font-mono block">Aporte ilustrativo</span>
             <span className="text-2xl font-display font-black text-white">
               ${totalPrice.toFixed(2)} USD
             </span>
@@ -263,7 +237,7 @@ export const RideDetailModal: React.FC<RideDetailModalProps> = ({
             </button>
 
             <button
-              disabled={isBooking}
+              disabled={isBooking || ride.availableSeats < 1}
               onClick={handleConfirm}
               className="min-h-[46px] px-6 py-2.5 rounded-xl text-xs sm:text-sm font-extrabold text-slate-950 bg-gradient-to-r from-[#315cff] to-[#00a89d] hover:from-[#4d77ff] hover:to-[#22c4b7] disabled:opacity-50 shadow-lg shadow-[#315cff]/25 flex items-center justify-center gap-2 transition-all transform active:scale-95"
             >
@@ -272,10 +246,12 @@ export const RideDetailModal: React.FC<RideDetailModalProps> = ({
                   <CheckCircle2 className="w-4 h-4 animate-bounce" />
                   <span>Confirmando...</span>
                 </>
+              ) : ride.availableSeats < 1 ? (
+                <span>Sin asientos de ejemplo</span>
               ) : (
                 <>
                   <CheckCircle2 className="w-4 h-4" />
-                  <span>Reservar Asiento</span>
+                  <span>Simular solicitud</span>
                 </>
               )}
             </button>

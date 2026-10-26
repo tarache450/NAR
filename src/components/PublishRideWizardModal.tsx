@@ -8,10 +8,10 @@ import {
   Users,
   Car,
   CheckCircle2,
+  Info,
   ArrowRight,
   ArrowLeft,
   Coins,
-  ShieldCheck,
   Sparkles
 } from 'lucide-react';
 
@@ -25,6 +25,7 @@ export const PublishRideWizardModal: React.FC<PublishRideWizardModalProps> = ({
   onPublish,
 }) => {
   const [step, setStep] = useState<number>(1);
+  const todayInElSalvador = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/El_Salvador', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
 
   // Form states
   const [originCity, setOriginCity] = useState('San Salvador (Multiplaza)');
@@ -32,13 +33,11 @@ export const PublishRideWizardModal: React.FC<PublishRideWizardModalProps> = ({
   const [destinationCity, setDestinationCity] = useState('Santa Ana (Metrocentro)');
   const [destinationAddress, setDestinationAddress] = useState('Boulevard Los 44, entrada principal');
   const [intermediateStop, setIntermediateStop] = useState('Santa Tecla (Parque San Martín)');
-  const [departureDate, setDepartureDate] = useState('Hoy, Miércoles');
-  const [departureTime, setDepartureTime] = useState('06:30 AM');
-  const [isRecurring, setIsRecurring] = useState(true);
+  const [departureDate, setDepartureDate] = useState(todayInElSalvador);
+  const [departureTime, setDepartureTime] = useState('06:30');
   const [seats, setSeats] = useState<number>(3);
   const [pricePerSeat, setPricePerSeat] = useState<number>(3.50);
   const [carModel, setCarModel] = useState('Toyota Corolla 2023');
-  const [carPlate, setCarPlate] = useState('P 814-920');
   const [amenities, setAmenities] = useState<string[]>(['Aire acondicionado', 'Música tranquila', 'No fumar']);
   const [isDone, setIsDone] = useState(false);
 
@@ -46,6 +45,18 @@ export const PublishRideWizardModal: React.FC<PublishRideWizardModalProps> = ({
   const quickCitiesDest = ['Santa Ana', 'San Miguel', 'La Libertad / El Tunco', 'Sonsonate', 'Chalatenango'];
 
   const handleNext = () => {
+    if (step === 1 && (!originCity.trim() || !destinationCity.trim())) {
+      window.alert('Indica una ciudad de salida y otra de destino.');
+      return;
+    }
+    if (step === 3 && (departureDate < todayInElSalvador || !departureTime)) {
+      window.alert('Elige una fecha de hoy en adelante y una hora de salida.');
+      return;
+    }
+    if (step === 4 && (!Number.isFinite(pricePerSeat) || pricePerSeat <= 0)) {
+      window.alert('Añade un aporte ilustrativo mayor que cero.');
+      return;
+    }
     if (step < 5) setStep(step + 1);
   };
 
@@ -54,23 +65,32 @@ export const PublishRideWizardModal: React.FC<PublishRideWizardModalProps> = ({
   };
 
   const handleFinish = () => {
+    if (!carModel.trim()) {
+      window.alert('Añade un modelo de vehículo de ejemplo para continuar.');
+      return;
+    }
     setIsDone(true);
 
+    const timeAfter = (minutes: number) => {
+      const [hour, minute] = departureTime.split(':').map(Number);
+      const total = (hour * 60 + minute + minutes) % (24 * 60);
+      return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`;
+    };
     const newRide: Ride = {
       id: `ride-sv-${Date.now().toString().slice(-4)}`,
       driver: {
         id: 'drv-current-user',
-        name: 'Miguel Ángel Cortez',
-        role: 'Ingeniero de Software',
-        affiliation: 'Tigo SV / Torre Futura',
-        avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=300&q=80',
-        rating: 5.0,
-        totalTrips: 1,
-        verifiedDUI: true,
-        verifiedPhone: true,
-        phone: '+503 7842-1920',
-        memberSince: 'Octubre 2026',
-        bio: 'Comparto mi trayecto diario de ida y vuelta para apoyar a otros profesionales y amortizar la gasolina.',
+        name: 'Conductor de ejemplo',
+        role: 'Perfil ilustrativo',
+        affiliation: 'NAR · demostración',
+        avatar: '/logo.svg',
+        rating: 0,
+        totalTrips: 0,
+        verifiedDUI: false,
+        verifiedPhone: false,
+        phone: '',
+        memberSince: 'No aplica',
+        bio: 'Datos creados localmente para ilustrar el formulario.',
         reviews: [],
       },
       vehicle: {
@@ -78,7 +98,7 @@ export const PublishRideWizardModal: React.FC<PublishRideWizardModalProps> = ({
         model: carModel,
         year: 2024,
         type: 'Sedán Familiar',
-        plate: carPlate,
+        plate: 'No especificada',
         color: 'Gris Oscuro',
         image: 'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&w=800&q=80',
         features: amenities,
@@ -96,7 +116,7 @@ export const PublishRideWizardModal: React.FC<PublishRideWizardModalProps> = ({
           id: `w-stop-${Date.now()}`,
           name: intermediateStop,
           city: intermediateStop.split('(')[0].trim(),
-          time: '07:00 AM',
+          time: timeAfter(30),
           type: 'stop',
           address: 'Punto intermedio sobre la carretera',
         }
@@ -105,13 +125,13 @@ export const PublishRideWizardModal: React.FC<PublishRideWizardModalProps> = ({
         id: `w-dest-${Date.now()}`,
         name: destinationCity,
         city: destinationCity.split('(')[0].trim(),
-        time: '07:45 AM',
+        time: timeAfter(75),
         type: 'destination',
         address: destinationAddress,
       },
       date: departureDate,
       departureTime,
-      arrivalTime: '07:45 AM',
+      arrivalTime: timeAfter(75),
       estimatedDuration: '1h 15m',
       distanceKm: 64.0,
       totalSeats: seats,
@@ -122,8 +142,6 @@ export const PublishRideWizardModal: React.FC<PublishRideWizardModalProps> = ({
       amenities,
       notes: 'Trayecto regular de trabajo. Puntualidad en el punto de encuentro.',
       passengers: [],
-      isRecurring,
-      recurringDays: isRecurring ? 'Lunes a Viernes' : undefined,
     };
 
     setTimeout(() => {
@@ -156,6 +174,7 @@ export const PublishRideWizardModal: React.FC<PublishRideWizardModalProps> = ({
               style={{ width: `${(step / 5) * 100}%` }}
             />
           </div>
+          <p className="mt-3 text-xs leading-relaxed text-slate-400">Formulario de demostración. Los datos se agregan solo a esta página y no se envían ni se guardan en un servidor.</p>
         </div>
 
         {/* Dynamic Step Content */}
@@ -169,7 +188,7 @@ export const PublishRideWizardModal: React.FC<PublishRideWizardModalProps> = ({
                   ¿De dónde sales?
                 </h3>
                 <p className="text-xs text-slate-400 mt-1">
-                  Indica tu punto de partida habitual en tu vehículo.
+                  Elige una ciudad y un punto ilustrativos para la ruta de muestra.
                 </p>
               </div>
 
@@ -227,7 +246,7 @@ export const PublishRideWizardModal: React.FC<PublishRideWizardModalProps> = ({
                   ¿A dónde te diriges?
                 </h3>
                 <p className="text-xs text-slate-400 mt-1">
-                  Las personas que tengan paradas dentro de esta ruta podrán solicitarte plaza.
+                  Añade el destino y las paradas que quieres mostrar en esta demostración.
                 </p>
               </div>
 
@@ -294,48 +313,33 @@ export const PublishRideWizardModal: React.FC<PublishRideWizardModalProps> = ({
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-[11px] font-mono uppercase text-slate-400 block mb-1">
+                  <label htmlFor="ride-date" className="text-[11px] font-mono uppercase text-slate-400 block mb-1">
                     Día del viaje
                   </label>
                   <input
-                    type="text"
+                    id="ride-date"
+                    type="date"
+                    min={todayInElSalvador}
                     value={departureDate}
                     onChange={(e) => setDepartureDate(e.target.value)}
-                    placeholder="Hoy, Miércoles"
                     className="w-full p-3 text-sm bg-[#0c0f17] border border-white/10 rounded-2xl text-white focus:outline-none focus:border-[#315cff]"
                   />
                 </div>
 
                 <div>
-                  <label className="text-[11px] font-mono uppercase text-slate-400 block mb-1">
+                  <label htmlFor="ride-time" className="text-[11px] font-mono uppercase text-slate-400 block mb-1">
                     Hora de salida
                   </label>
                   <input
-                    type="text"
+                    id="ride-time"
+                    type="time"
                     value={departureTime}
                     onChange={(e) => setDepartureTime(e.target.value)}
-                    placeholder="06:30 AM"
                     className="w-full p-3 text-sm bg-[#0c0f17] border border-white/10 rounded-2xl text-white focus:outline-none focus:border-[#315cff]"
                   />
                 </div>
               </div>
 
-              {/* Recurring Commute Toggle */}
-              <div className="p-3.5 rounded-2xl bg-[#0c0f17] border border-white/10 flex items-center justify-between">
-                <div>
-                  <span className="text-xs font-bold text-white block">¿Es tu ruta diaria de trabajo?</span>
-                  <span className="text-[11px] text-slate-400">Publicar para lunes a viernes automáticamente</span>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setIsRecurring(!isRecurring)}
-                  className={`px-3 py-1 text-xs font-bold rounded-xl transition-all ${
-                    isRecurring ? 'bg-[#315cff] text-slate-950' : 'bg-white/10 text-slate-400'
-                  }`}
-                >
-                  {isRecurring ? 'Sí, Recurrente' : 'Solo este día'}
-                </button>
-              </div>
             </div>
           )}
 
@@ -393,7 +397,7 @@ export const PublishRideWizardModal: React.FC<PublishRideWizardModalProps> = ({
                   <span className="text-xs text-slate-400 font-mono">USD</span>
                 </div>
                 <span className="text-[10px] text-slate-500 mt-1 block">
-                  Promedio en El Salvador para esta ruta: $3.00 - $4.00 USD.
+                  Cantidad ilustrativa; el prototipo no procesa aportes ni pagos.
                 </span>
               </div>
             </div>
@@ -407,11 +411,11 @@ export const PublishRideWizardModal: React.FC<PublishRideWizardModalProps> = ({
                   Tu Vehículo & Reglas
                 </h3>
                 <p className="text-xs text-slate-400 mt-1">
-                  Para que los pasajeros identifiquen tu auto en el punto de encuentro.
+                  Datos de prueba. No introduzcas placa ni información personal real.
                 </p>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 gap-3">
                 <div>
                   <label className="text-[11px] font-mono uppercase text-slate-400 block mb-1">
                     Modelo del auto
@@ -425,25 +429,13 @@ export const PublishRideWizardModal: React.FC<PublishRideWizardModalProps> = ({
                   />
                 </div>
 
-                <div>
-                  <label className="text-[11px] font-mono uppercase text-slate-400 block mb-1">
-                    Placa salvadoreña
-                  </label>
-                  <input
-                    type="text"
-                    value={carPlate}
-                    onChange={(e) => setCarPlate(e.target.value)}
-                    placeholder="P 814-920"
-                    className="w-full p-2.5 text-xs bg-[#0c0f17] border border-white/10 rounded-xl text-white"
-                  />
-                </div>
               </div>
 
               {/* Trust badge note */}
               <div className="p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center gap-2.5 text-xs text-emerald-300">
-                <ShieldCheck className="w-5 h-5 shrink-0" />
+                <Info className="w-5 h-5 shrink-0" />
                 <span>
-                  Tu perfil tiene <strong>DUI salvadoreño verificado</strong>. Los pasajeros viajarán con total confianza.
+                  Esta información solo se conserva temporalmente en esta demostración. NAR no verifica identidades ni vehículos.
                 </span>
               </div>
             </div>
@@ -488,7 +480,7 @@ export const PublishRideWizardModal: React.FC<PublishRideWizardModalProps> = ({
                 ) : (
                   <>
                     <CheckCircle2 className="w-4 h-4" />
-                    <span>Publicar Ruta Ahora</span>
+                    <span>Probar publicación</span>
                   </>
                 )}
               </button>

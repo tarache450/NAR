@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { lazy, Suspense, useState, useRef } from 'react';
+import React, { lazy, Suspense, useState, useRef, useEffect } from 'react';
 import { INITIAL_RIDES, POPULAR_ROUTES } from './data/mockData';
 import { Ride } from './types';
 import { Navbar } from './components/Navbar';
@@ -13,16 +13,16 @@ import { HowItWorksVisual } from './components/HowItWorksVisual';
 import { PopularRoutesSection } from './components/PopularRoutesSection';
 import { RideCard } from './components/RideCard';
 import { TrustSafetySection } from './components/TrustSafetySection';
+import { QuestionsSection } from './components/QuestionsSection';
 import { Logo } from './components/Logo';
+import { locationMatches } from './lib/locations';
 
 const SearchView = lazy(() => import('./components/SearchView').then(m => ({ default: m.SearchView })));
 const LiveTelemetryView = lazy(() => import('./components/LiveTelemetryView').then(m => ({ default: m.LiveTelemetryView })));
 const PublishRideWizardModal = lazy(() => import('./components/PublishRideWizardModal').then(m => ({ default: m.PublishRideWizardModal })));
 const DigitalBoardingPassModal = lazy(() => import('./components/DigitalBoardingPassModal').then(m => ({ default: m.DigitalBoardingPassModal })));
-const RideChatModal = lazy(() => import('./components/RideChatModal').then(m => ({ default: m.RideChatModal })));
 const ProfileView = lazy(() => import('./components/ProfileView').then(m => ({ default: m.ProfileView })));
 const RideDetailModal = lazy(() => import('./components/RideDetailModal').then(m => ({ default: m.RideDetailModal })));
-const StaggeredMenu = lazy(() => import('./components/reactbits/StaggeredMenu').then(m => ({ default: m.default as React.ComponentType<any> })));
 import { 
   Search, 
   MapPin, 
@@ -34,8 +34,6 @@ import {
   Sparkles,
   ArrowRight,
   Filter,
-  Wifi,
-  BatteryMedium
 } from 'lucide-react';
 
 export default function App() {
@@ -43,9 +41,7 @@ export default function App() {
   const [popularRoutes] = useState(POPULAR_ROUTES);
   
   // Navigation & View state
-  const [mode, setMode] = useState<'request' | 'offer'>('request');
   const [activeTab, setActiveTab] = useState<TabType>('explore');
-  const [isMobileMockup, setIsMobileMockup] = useState<boolean>(false);
 
   // Search parameters
   const [origin, setOrigin] = useState('');
@@ -62,12 +58,37 @@ export default function App() {
   const [isPublishWizardOpen, setIsPublishWizardOpen] = useState(false);
   const [passRide, setPassRide] = useState<Ride | null>(null);
   const [passSeatCount, setPassSeatCount] = useState<number>(1);
-  const [chatRide, setChatRide] = useState<Ride | null>(null);
 
   // Toast
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   const resultsRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const elements = Array.from(document.querySelectorAll<HTMLElement>('.nar-reveal'));
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reduceMotion || !('IntersectionObserver' in window)) return;
+
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (!entry.isIntersecting) return;
+        const element = entry.target as HTMLElement;
+        element.classList.remove('nar-reveal-pending');
+        element.classList.add('nar-reveal-visible');
+        observer.unobserve(element);
+      });
+    }, { threshold: 0.12, rootMargin: '0px 0px -36px 0px' });
+
+    elements.forEach((element) => {
+      if (element.getBoundingClientRect().top < window.innerHeight * 0.9) {
+        element.classList.add('nar-reveal-visible');
+      } else {
+        element.classList.add('nar-reveal-pending');
+        observer.observe(element);
+      }
+    });
+    return () => observer.disconnect();
+  }, [activeTab]);
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -90,19 +111,14 @@ export default function App() {
   const handleSelectPopularRoute = (orig: string, dest: string) => {
     setOrigin(orig);
     setDestination(dest);
+    setCityFilter('todos');
     handleSearch();
   };
 
   // Filter rides based on search query
   const filteredRides = rides.filter(ride => {
-    const matchesOrigin = !origin.trim() || 
-      ride.origin.name.toLowerCase().includes(origin.toLowerCase()) ||
-      ride.origin.city.toLowerCase().includes(origin.toLowerCase());
-
-    const matchesDest = !destination.trim() ||
-      ride.destination.name.toLowerCase().includes(destination.toLowerCase()) ||
-      ride.destination.city.toLowerCase().includes(destination.toLowerCase()) ||
-      ride.waypoints.some(wp => wp.name.toLowerCase().includes(destination.toLowerCase()) || wp.city.toLowerCase().includes(destination.toLowerCase()));
+    const matchesOrigin = locationMatches(origin, [ride.origin]);
+    const matchesDest = locationMatches(destination, [...ride.waypoints, ride.destination]);
 
     const matchesCityFilter = cityFilter === 'todos' || 
       ride.origin.city.toLowerCase().includes(cityFilter.toLowerCase()) ||
@@ -142,13 +158,13 @@ export default function App() {
     setPassSeatCount(seatCount);
     setPassRide(bookedRide);
     setActiveTelemetryRide(bookedRide);
-    showToast(`¡Asiento reservado con éxito! Tu código QR está listo.`);
+    showToast('Solicitud simulada en esta página. No se notificó a ningún conductor.');
   };
 
   const handlePublishSuccess = (newRide: Ride) => {
     setRides(prev => [newRide, ...prev]);
     setIsPublishWizardOpen(false);
-    showToast('¡Tu ruta ha sido publicada! Los pasajeros de la zona podrán verla.');
+    showToast('Publicación de ejemplo añadida solo durante esta sesión.');
     setActiveTab('explore');
     handleSearch();
   };
@@ -177,8 +193,15 @@ export default function App() {
               onOpenPublish={() => setIsPublishWizardOpen(true)}
             />
 
+            <aside className="mx-auto -mt-5 max-w-6xl px-4" role="note">
+              <div className="flex flex-col gap-3 rounded-2xl border border-[#9cb3ff]/20 bg-[#101a2b] px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+                <p className="max-w-3xl text-sm leading-relaxed text-slate-300"><strong className="text-white">Estás viendo una demostración.</strong> Las rutas, perfiles y precios son ilustrativos; no hay reservas, pagos ni conductores conectados.</p>
+                <a href="#preguntas-frecuentes" className="shrink-0 text-sm font-bold text-[#b8c6ff] hover:text-white">Qué está disponible <span aria-hidden="true">→</span></a>
+              </div>
+            </aside>
+
             {/* Available Rides Section with Results */}
-            <section ref={resultsRef} className="pt-4 scroll-mt-20">
+            <section ref={resultsRef} className="nar-reveal pt-4 scroll-mt-20">
               <div className="max-w-6xl mx-auto px-4">
                 
                 {/* Results Section Header */}
@@ -188,10 +211,10 @@ export default function App() {
                       RUTAS COMPATIBLES EN EL SALVADOR · NAR
                     </span>
                     <h2 className="text-2xl sm:text-3xl font-display font-extrabold text-white tracking-tight">
-                      Conductores que ya van por tu camino
+                      Rutas para comparar en tu próximo viaje
                     </h2>
                     <p className="text-xs sm:text-sm text-slate-400 mt-1">
-                      Aprovecha asientos en trayectos existentes y viaja sin desvíos de taxi ni paradas de bus
+                      Filtra por ciudad y revisa horarios, paradas y aportes ilustrativos
                     </p>
                   </div>
 
@@ -241,13 +264,13 @@ export default function App() {
                       No hay rutas para este filtro en este momento
                     </h3>
                     <p className="text-xs sm:text-sm text-slate-400 mt-1.5 max-w-md mx-auto">
-                      ¿Vas a viajar en tu auto? Publica tus asientos y comparte la gasolina con personas de tu zona.
+                      Prueba el formulario para explorar el flujo. La publicación solo aparecerá en esta sesión de demostración.
                     </p>
                     <button
                       onClick={() => setIsPublishWizardOpen(true)}
                       className="mt-5 px-6 py-2.5 rounded-xl text-xs sm:text-sm font-bold text-slate-950 bg-gradient-to-r from-[#315cff] to-[#00a89d] hover:from-[#4d77ff] hover:to-[#22c4b7] shadow-md shadow-[#315cff]/20"
                     >
-                      Publicar Mi Asiento Ahora
+                      Probar formulario de publicación
                     </button>
                   </div>
                 )}
@@ -266,6 +289,7 @@ export default function App() {
 
             {/* Trust and Safety Section */}
             <TrustSafetySection />
+            <QuestionsSection />
 
           </div>
         )}
@@ -289,8 +313,7 @@ export default function App() {
           <div className="py-6 px-4">
             <Suspense fallback={<div className="p-8 text-slate-400">Cargando ruta…</div>}><LiveTelemetryView
               ride={activeTelemetryRide}
-              onOpenPass={() => setPassRide(activeTelemetryRide)}
-              onOpenChat={() => setChatRide(activeTelemetryRide)}
+              onBack={() => setActiveTab('explore')}
             /></Suspense>
           </div>
         )}
@@ -312,7 +335,7 @@ export default function App() {
       
       {/* Toast Notification */}
       {toastMessage && (
-        <div className="fixed top-4 right-4 z-50 bg-[#161d2d] border border-[#315cff] text-white text-xs px-4 py-3 rounded-2xl shadow-2xl flex items-center gap-2.5 animate-in fade-in slide-in-from-top-4 duration-200">
+        <div role="status" aria-live="polite" className="fixed top-4 right-4 z-50 bg-[#161d2d] border border-[#315cff] text-white text-xs px-4 py-3 rounded-2xl shadow-2xl flex items-center gap-2.5 animate-in fade-in slide-in-from-top-4 duration-200">
           <CheckCircle2 className="w-4 h-4 text-[#9cb3ff] shrink-0" />
           <span>{toastMessage}</span>
         </div>
@@ -320,11 +343,6 @@ export default function App() {
 
       {/* Top Navbar */}
       <Navbar
-        mode={mode}
-        onModeChange={(m) => {
-          setMode(m);
-          if (m === 'offer') setIsPublishWizardOpen(true);
-        }}
         activeView={activeTab}
         onViewChange={(tab) => {
           if (tab === 'publish') {
@@ -334,130 +352,15 @@ export default function App() {
           }
         }}
         onOpenPublish={() => setIsPublishWizardOpen(true)}
-        isMobileMockup={isMobileMockup}
-        onToggleMockup={() => setIsMobileMockup(!isMobileMockup)}
       />
-
-      {!detailRide && !isPublishWizardOpen && !passRide && !chatRide && <div className="nar-staggered-menu lg:hidden">
-        <Suspense fallback={null}>
-          <StaggeredMenu
-            isFixed
-            colors={['#315cff', '#00a89d']}
-            items={[
-              { label: 'Explorar', ariaLabel: 'Explorar rutas', view: 'explore' },
-              { label: 'Buscar', ariaLabel: 'Buscar viajes', view: 'search' },
-              { label: 'En vivo', ariaLabel: 'Ver la ruta en vivo', view: 'telemetry' },
-              { label: 'Mi perfil', ariaLabel: 'Ver mi perfil', view: 'profile' },
-              { label: 'Publicar', ariaLabel: 'Publicar un viaje', view: 'publish' },
-            ]}
-            onItemClick={(item: { view: TabType }) => item.view === 'publish' ? setIsPublishWizardOpen(true) : setActiveTab(item.view)}
-            displaySocials={false}
-            menuButtonColor="#ffffff"
-            openMenuButtonColor="#ffffff"
-            accentColor="#9cb3ff"
-          />
-        </Suspense>
-      </div>}
 
       {/* Main Body */}
       <main className="flex-1 w-full">
-        {isMobileMockup ? (
-          /* Phone Frame Mockup View (Ref 1 & 2 Style) */
-          <div className="flex flex-col items-center justify-center my-4 px-2">
-            
-            <div className="mb-3 flex items-center gap-2 text-xs text-slate-400 font-mono">
-              <span className="w-2 h-2 rounded-full bg-[#315cff]" />
-              <span>Simulador Móvil NAR (390 x 844 px)</span>
-              <button 
-                onClick={() => setIsMobileMockup(false)}
-                className="text-[#c4cfff] hover:underline ml-2"
-              >
-                Pantalla completa
-              </button>
-            </div>
-
-            <div className="w-[390px] h-[844px] bg-[#0c1017] border-4 border-slate-700 rounded-[48px] shadow-2xl shadow-black relative overflow-hidden flex flex-col ring-1 ring-white/10">
-              
-              {/* Dynamic Island / Top Bezel */}
-              <div className="h-10 bg-[#0c1017] px-6 flex items-center justify-between z-30 shrink-0 border-b border-white/5">
-                <span className="text-[12px] font-mono text-white font-semibold">07:15</span>
-                <div className="w-24 h-4 bg-black rounded-full mx-auto" />
-                <div className="flex items-center gap-1.5 text-xs text-slate-300">
-                  <Wifi className="w-3.5 h-3.5 text-[#9cb3ff]" />
-                  <BatteryMedium className="w-3.5 h-3.5 text-white" />
-                </div>
-              </div>
-
-              {/* Scrollable Container */}
-              <div className="flex-1 overflow-y-auto p-3 space-y-4">
-                {renderContent()}
-              </div>
-
-              {/* Bottom Mobile Bar inside chassis */}
-              <div className="h-14 bg-[#131722]/95 border-t border-white/10 px-3 flex items-center justify-around z-30 shrink-0">
-                <button
-                  onClick={() => setActiveTab('explore')}
-                  className={`flex flex-col items-center gap-0.5 text-[10px] ${
-                    activeTab === 'explore' ? 'text-[#9cb3ff] font-bold' : 'text-slate-400'
-                  }`}
-                >
-                  <Logo size="sm" showWordmark={false} />
-                  <span>Rutas</span>
-                </button>
-
-                <button
-                  onClick={() => setActiveTab('search')}
-                  className={`flex flex-col items-center gap-0.5 text-[10px] ${
-                    activeTab === 'search' ? 'text-[#9cb3ff] font-bold' : 'text-slate-400'
-                  }`}
-                >
-                  <Search className="w-4 h-4" />
-                  <span>Buscar</span>
-                </button>
-
-                <button
-                  onClick={() => setIsPublishWizardOpen(true)}
-                  className="w-10 h-10 -mt-5 rounded-full bg-[#315cff] border-2 border-[#0c1017] flex items-center justify-center text-slate-950 shadow-lg"
-                  aria-label="Publicar"
-                >
-                  <Car className="w-5 h-5" />
-                </button>
-
-                <button
-                  onClick={() => setActiveTab('telemetry')}
-                  className={`flex flex-col items-center gap-0.5 text-[10px] ${
-                    activeTab === 'telemetry' ? 'text-[#9cb3ff] font-bold' : 'text-slate-400'
-                  }`}
-                >
-                  <Radio className="w-4 h-4" />
-                  <span>En Vivo</span>
-                </button>
-
-                <button
-                  onClick={() => setActiveTab('profile')}
-                  className={`flex flex-col items-center gap-0.5 text-[10px] ${
-                    activeTab === 'profile' ? 'text-emerald-400 font-bold' : 'text-slate-400'
-                  }`}
-                >
-                  <ShieldCheck className="w-4 h-4" />
-                  <span>Perfil</span>
-                </button>
-              </div>
-
-            </div>
-
-          </div>
-        ) : (
-          /* Full Viewport Clean Experience */
-          <div>
-            {renderContent()}
-          </div>
-        )}
+        <div>{renderContent()}</div>
       </main>
 
       {/* Floating Bottom Nav for Real Mobile Devices (< 768px) */}
-      {!isMobileMockup && (
-        <BottomNav
+      <BottomNav
           activeTab={activeTab}
           onTabChange={(tab) => {
             if (tab === 'publish') {
@@ -466,9 +369,8 @@ export default function App() {
               setActiveTab(tab);
             }
           }}
-          hasActiveTrip={activeTelemetryRide.status === 'in_progress'}
-        />
-      )}
+          hasActiveTrip={false}
+      />
 
       {/* Ride Detail & Booking Modal */}
       {detailRide && (
@@ -476,10 +378,6 @@ export default function App() {
           ride={detailRide}
           onClose={() => setDetailRide(null)}
           onBookSuccess={handleBookSuccess}
-          onOpenLiveView={(ride) => {
-            setActiveTelemetryRide(ride);
-            setActiveTab('telemetry');
-          }}
         /></Suspense>
       )}
 
@@ -500,26 +398,19 @@ export default function App() {
         /></Suspense>
       )}
 
-      {/* Encrypted In-Ride Chat Modal */}
-      {chatRide && (
-        <Suspense fallback={null}><RideChatModal
-          ride={chatRide}
-          onClose={() => setChatRide(null)}
-        /></Suspense>
-      )}
-
       {/* Footer */}
       <footer className="border-t border-white/10 py-10 px-4 sm:px-6 lg:px-8 bg-[#090c13] text-xs text-slate-400 mt-16 mb-16 md:mb-0">
         <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-6">
           <div className="flex items-center gap-3">
             <Logo size="sm" showWordmark={true} />
             <span className="text-slate-500">|</span>
-            <span className="text-slate-400">NAR · Red de viajes compartidos en El Salvador</span>
+            <span className="text-slate-400">NAR · Prototipo de viajes compartidos para El Salvador</span>
           </div>
+          <a href={`${import.meta.env.BASE_URL}como-funciona/`} className="text-sm text-slate-300 underline decoration-white/20 underline-offset-4 hover:text-white">Cómo funciona</a>
           <div className="flex items-center gap-4 text-[11px] font-mono text-slate-400 flex-wrap justify-center">
-            <span className="text-emerald-400">✓ DUI Verificado</span>
+            <span>Datos de viaje de ejemplo</span>
             <span>·</span>
-            <span className="text-[#c4cfff]">Aporte Justo en USD</span>
+            <span className="text-[#c4cfff]">Sin reservas ni pagos reales</span>
             <span>·</span>
             <span>Carretera Los Chorros & Panamericana</span>
           </div>

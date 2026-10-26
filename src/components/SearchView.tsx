@@ -1,17 +1,8 @@
 import React, { useState } from 'react';
 import { Ride } from '../types';
 import { RideCard } from './RideCard';
-import { 
-  Search, 
-  MapPin, 
-  Clock, 
-  Filter, 
-  SlidersHorizontal, 
-  ArrowRightLeft,
-  Star,
-  Users,
-  Car
-} from 'lucide-react';
+import { locationMatches } from '../lib/locations';
+import { ArrowRightLeft, Car } from 'lucide-react';
 
 interface SearchViewProps {
   rides: Ride[];
@@ -32,7 +23,6 @@ export const SearchView: React.FC<SearchViewProps> = ({
   const [destination, setDestination] = useState(initialDestination);
   const [timeFilter, setTimeFilter] = useState<'all' | 'morning' | 'afternoon'>('all');
   const [maxPrice, setMaxPrice] = useState<number>(6);
-  const [minRating, setMinRating] = useState<number>(4.5);
 
   const handleSwap = () => {
     const temp = origin;
@@ -41,17 +31,10 @@ export const SearchView: React.FC<SearchViewProps> = ({
   };
 
   const filteredRides = rides.filter(ride => {
-    const matchOrigin = !origin.trim() || 
-      ride.origin.name.toLowerCase().includes(origin.toLowerCase()) ||
-      ride.origin.city.toLowerCase().includes(origin.toLowerCase());
-
-    const matchDest = !destination.trim() ||
-      ride.destination.name.toLowerCase().includes(destination.toLowerCase()) ||
-      ride.destination.city.toLowerCase().includes(destination.toLowerCase()) ||
-      ride.waypoints.some(wp => wp.name.toLowerCase().includes(destination.toLowerCase()) || wp.city.toLowerCase().includes(destination.toLowerCase()));
+    const matchOrigin = locationMatches(origin, [ride.origin]);
+    const matchDest = locationMatches(destination, [...ride.waypoints, ride.destination]);
 
     const matchPrice = ride.seatPrice <= maxPrice;
-    const matchRating = ride.driver.rating >= minRating;
 
     // Time filter
     let matchTime = true;
@@ -65,7 +48,7 @@ export const SearchView: React.FC<SearchViewProps> = ({
       matchTime = hour24 >= 12 && hour24 <= 21;
     }
 
-    return matchOrigin && matchDest && matchPrice && matchRating && matchTime;
+    return matchOrigin && matchDest && matchPrice && matchTime;
   });
 
   return (
@@ -74,13 +57,13 @@ export const SearchView: React.FC<SearchViewProps> = ({
       {/* Header */}
       <div>
         <span className="text-xs font-mono font-bold uppercase tracking-wider text-[#9cb3ff] block mb-1">
-          BUSCADOR DE VIAJES COMPARTIDOS NAR
+          BUSCADOR · DATOS DE EJEMPLO
         </span>
         <h1 className="text-2xl sm:text-3xl font-display font-extrabold text-white tracking-tight">
           Buscar ruta en El Salvador
         </h1>
         <p className="text-xs sm:text-sm text-slate-400 mt-1">
-          Filtra por horario, conductor y precio para encontrar tu trayecto ideal
+          Filtra horarios y aportes ilustrativos para explorar distintos trayectos
         </p>
       </div>
 
@@ -91,10 +74,11 @@ export const SearchView: React.FC<SearchViewProps> = ({
         <div className="grid grid-cols-1 md:grid-cols-11 gap-3 items-center">
           
           <div className="md:col-span-5 relative">
-            <label className="text-[10px] font-mono uppercase text-amber-400 font-bold block mb-1">
+            <label htmlFor="search-origin" className="text-[10px] font-mono uppercase text-amber-400 font-bold block mb-1">
               Origen
             </label>
             <input
+              id="search-origin"
               type="text"
               value={origin}
               onChange={(e) => setOrigin(e.target.value)}
@@ -107,6 +91,7 @@ export const SearchView: React.FC<SearchViewProps> = ({
             <button
               type="button"
               onClick={handleSwap}
+              aria-label="Intercambiar origen y destino"
               className="w-10 h-10 rounded-xl bg-[#0c1017] hover:bg-white/10 border border-white/10 text-[#9cb3ff] flex items-center justify-center transition-colors"
               title="Invertir ciudades"
             >
@@ -115,10 +100,11 @@ export const SearchView: React.FC<SearchViewProps> = ({
           </div>
 
           <div className="md:col-span-5 relative">
-            <label className="text-[10px] font-mono uppercase text-[#9cb3ff] font-bold block mb-1">
+            <label htmlFor="search-destination" className="text-[10px] font-mono uppercase text-[#9cb3ff] font-bold block mb-1">
               Destino
             </label>
             <input
+              id="search-destination"
               type="text"
               value={destination}
               onChange={(e) => setDestination(e.target.value)}
@@ -175,6 +161,7 @@ export const SearchView: React.FC<SearchViewProps> = ({
               <span className="text-[#c4cfff] font-bold font-display">${maxPrice}.00 USD</span>
             </div>
             <input 
+              aria-label="Aporte máximo ilustrativo por asiento"
               type="range"
               min="2"
               max="8"
@@ -185,46 +172,23 @@ export const SearchView: React.FC<SearchViewProps> = ({
             />
           </div>
 
-          {/* Min Rating */}
-          <div>
-            <div className="flex items-center justify-between text-[11px] font-mono text-slate-400 mb-1.5">
-              <span>Reputación Mínima:</span>
-              <span className="text-yellow-400 font-bold">★ {minRating}</span>
-            </div>
-            <div className="grid grid-cols-3 gap-1 bg-[#0c1017] p-1 rounded-xl border border-white/5">
-              {[4.5, 4.8, 4.9].map((rat) => (
-                <button
-                  key={rat}
-                  type="button"
-                  onClick={() => setMinRating(rat)}
-                  className={`py-1.5 text-xs font-semibold rounded-lg transition-all ${
-                    minRating === rat ? 'bg-[#315cff] text-slate-950 font-bold' : 'text-slate-400'
-                  }`}
-                >
-                  ★ {rat}+
-                </button>
-              ))}
-            </div>
-          </div>
-
         </div>
 
       </div>
 
       {/* Results Header */}
-      <div className="flex items-center justify-between pt-2">
+      <div className="flex items-center justify-between pt-2" aria-live="polite" aria-atomic="true">
         <span className="text-xs font-mono text-slate-400">
-          Se encontraron <strong className="text-white">{filteredRides.length}</strong> trayectos disponibles
+          <strong className="text-white">{filteredRides.length}</strong> trayectos de ejemplo
         </span>
 
-        {(origin || destination || timeFilter !== 'all' || maxPrice < 6) && (
+        {(origin || destination || timeFilter !== 'all' || maxPrice !== 6) && (
           <button
             onClick={() => {
               setOrigin('');
               setDestination('');
               setTimeFilter('all');
               setMaxPrice(6);
-              setMinRating(4.5);
             }}
             className="text-xs text-[#9cb3ff] hover:underline"
           >
