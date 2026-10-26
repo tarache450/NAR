@@ -37,7 +37,7 @@ export const Logo: React.FC<LogoProps> = ({
       {showWordmark && (
         <div className="flex flex-col text-left leading-none">
           <span className={`font-display font-black ${text} tracking-tight text-white flex items-center gap-1`}>
-            NAR <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded-md bg-[#00c29a]/15 text-[#00c29a] border border-[#00c29a]/30">SV</span>
+            NAR <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded-md bg-[#315cff]/15 text-[#9cb3ff] border border-[#315cff]/30">SV</span>
           </span>
           <span className={`font-mono uppercase ${sub} tracking-widest text-slate-400 font-semibold mt-1`}>
             Viajes Compartidos
