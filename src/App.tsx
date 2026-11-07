@@ -1,531 +1,336 @@
-/**
- * @license
- * SPDX-License-Identifier: Apache-2.0
- */
-
-import React, { lazy, Suspense, useState, useRef } from 'react';
-import { INITIAL_RIDES, POPULAR_ROUTES } from './data/mockData';
-import { Ride } from './types';
+import React, { Suspense, lazy, useCallback, useEffect, useMemo, useState } from 'react';
+import { CheckCircle2 } from 'lucide-react';
 import { Navbar } from './components/Navbar';
-import { BottomNav, TabType } from './components/BottomNav';
-import { HeroSearch } from './components/HeroSearch';
-import { HowItWorksVisual } from './components/HowItWorksVisual';
-import { PopularRoutesSection } from './components/PopularRoutesSection';
-import { RideCard } from './components/RideCard';
-import { TrustSafetySection } from './components/TrustSafetySection';
-import { Logo } from './components/Logo';
+import { BottomNav } from './components/BottomNav';
+import { Footer } from './components/Footer';
+import { HomeView } from './components/HomeView';
+import { AmbientBackground } from './components/AmbientBackground';
+import type { SearchQuery } from './components/SearchPanel';
+import { INITIAL_RIDES } from './data/mockData';
+import type { Booking, Ride } from './types';
+import { clock24, corridorsFrom } from './lib/rides';
+import { hashFor, viewFromHash, type ViewType } from './lib/nav';
+import SwipeToast from './components/bits/SwipeToast';
+import LatticeLoader from './components/bits/LatticeLoader';
 
-const SearchView = lazy(() => import('./components/SearchView').then(m => ({ default: m.SearchView })));
-const LiveTelemetryView = lazy(() => import('./components/LiveTelemetryView').then(m => ({ default: m.LiveTelemetryView })));
-const PublishRideWizardModal = lazy(() => import('./components/PublishRideWizardModal').then(m => ({ default: m.PublishRideWizardModal })));
-const DigitalBoardingPassModal = lazy(() => import('./components/DigitalBoardingPassModal').then(m => ({ default: m.DigitalBoardingPassModal })));
-const RideChatModal = lazy(() => import('./components/RideChatModal').then(m => ({ default: m.RideChatModal })));
-const ProfileView = lazy(() => import('./components/ProfileView').then(m => ({ default: m.ProfileView })));
-const RideDetailModal = lazy(() => import('./components/RideDetailModal').then(m => ({ default: m.RideDetailModal })));
-const StaggeredMenu = lazy(() => import('./components/reactbits/StaggeredMenu').then(m => ({ default: m.default as React.ComponentType<any> })));
-import { 
-  Search, 
-  MapPin, 
-  Users, 
-  ShieldCheck, 
-  Car, 
-  Radio, 
-  CheckCircle2, 
-  Sparkles,
-  ArrowRight,
-  Filter,
-  Wifi,
-  BatteryMedium
-} from 'lucide-react';
+const SearchView = lazy(() => import('./components/SearchView').then((m) => ({ default: m.SearchView })));
+const CorridorsView = lazy(() => import('./components/CorridorsView').then((m) => ({ default: m.CorridorsView })));
+const LiveTripView = lazy(() => import('./components/LiveTripView').then((m) => ({ default: m.LiveTripView })));
+const ProfileView = lazy(() => import('./components/ProfileView').then((m) => ({ default: m.ProfileView })));
+const RideDetailModal = lazy(() => import('./components/RideDetailModal').then((m) => ({ default: m.RideDetailModal })));
+const PublishRideWizardModal = lazy(() =>
+  import('./components/PublishRideWizardModal').then((m) => ({ default: m.PublishRideWizardModal }))
+);
+const BoardingPassModal = lazy(() => import('./components/BoardingPassModal').then((m) => ({ default: m.BoardingPassModal })));
+const RideChatModal = lazy(() => import('./components/RideChatModal').then((m) => ({ default: m.RideChatModal })));
 
-export default function App() {
-  const [rides, setRides] = useState<Ride[]>(INITIAL_RIDES);
-  const [popularRoutes] = useState(POPULAR_ROUTES);
-  
-  // Navigation & View state
-  const [mode, setMode] = useState<'request' | 'offer'>('request');
-  const [activeTab, setActiveTab] = useState<TabType>('explore');
-  const [isMobileMockup, setIsMobileMockup] = useState<boolean>(false);
+const STORE_KEY = 'nar_demo_state_v2';
 
-  // Search parameters
-  const [origin, setOrigin] = useState('');
-  const [destination, setDestination] = useState('');
-  const [selectedDate, setSelectedDate] = useState('hoy');
-  const [passengers, setPassengers] = useState<number>(1);
-  const [cityFilter, setCityFilter] = useState<string>('todos');
+interface Persisted {
+  rides: Ride[];
+  bookings: Booking[];
+}
 
-  // Modals
-  const [detailRide, setDetailRide] = useState<Ride | null>(null);
-  const [activeTelemetryRide, setActiveTelemetryRide] = useState<Ride>(
-    INITIAL_RIDES.find(r => r.status === 'in_progress') || INITIAL_RIDES[0]
-  );
-  const [isPublishWizardOpen, setIsPublishWizardOpen] = useState(false);
-  const [passRide, setPassRide] = useState<Ride | null>(null);
-  const [passSeatCount, setPassSeatCount] = useState<number>(1);
-  const [chatRide, setChatRide] = useState<Ride | null>(null);
+function loadState(): Persisted {
+  try {
+    const raw = localStorage.getItem(STORE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw) as Persisted;
+      if (Array.isArray(parsed.rides) && Array.isArray(parsed.bookings)) return parsed;
+    }
+  } catch {
+    /* almacenamiento no disponible */
+  }
+  return { rides: INITIAL_RIDES, bookings: [] };
+}
 
-  // Toast
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
+const EMPTY_QUERY: SearchQuery = { origin: '', destination: '', day: 'today', seats: 1 };
 
-  const resultsRef = useRef<HTMLDivElement>(null);
+export function App() {
+  const [{ rides, bookings }, setStore] = useState<Persisted>(loadState);
+  const [view, setView] = useState<ViewType>(() => viewFromHash(window.location.hash));
+  const [query, setQuery] = useState<SearchQuery>(EMPTY_QUERY);
 
-  const showToast = (msg: string) => {
-    setToastMessage(msg);
-    setTimeout(() => setToastMessage(null), 3500);
-  };
+  const [selectedRideId, setSelectedRideId] = useState<string | null>(null);
+  const [publishOpen, setPublishOpen] = useState(false);
+  const [passBookingId, setPassBookingId] = useState<string | null>(null);
+  const [chatRideId, setChatRideId] = useState<string | null>(null);
+  const [tripRideId, setTripRideId] = useState<string | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
 
-  const handleSwapLocations = () => {
-    const temp = origin;
-    setOrigin(destination);
-    setDestination(temp);
-  };
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORE_KEY, JSON.stringify({ rides, bookings }));
+    } catch {
+      /* sin persistencia */
+    }
+  }, [rides, bookings]);
 
-  const handleSearch = () => {
-    setActiveTab('explore');
-    setTimeout(() => {
-      resultsRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }, 100);
-  };
+  useEffect(() => {
+    const onHash = () => setView(viewFromHash(window.location.hash));
+    window.addEventListener('hashchange', onHash);
+    return () => window.removeEventListener('hashchange', onHash);
+  }, []);
 
-  const handleSelectPopularRoute = (orig: string, dest: string) => {
-    setOrigin(orig);
-    setDestination(dest);
-    handleSearch();
-  };
+  useEffect(() => {
+    if (!toast) return;
+    const t = window.setTimeout(() => setToast(null), 4500);
+    return () => window.clearTimeout(t);
+  }, [toast]);
 
-  // Filter rides based on search query
-  const filteredRides = rides.filter(ride => {
-    const matchesOrigin = !origin.trim() || 
-      ride.origin.name.toLowerCase().includes(origin.toLowerCase()) ||
-      ride.origin.city.toLowerCase().includes(origin.toLowerCase());
+  const rideById = useCallback((id: string | null) => (id ? rides.find((r) => r.id === id) ?? null : null), [rides]);
+  const corridors = useMemo(() => corridorsFrom(rides), [rides]);
+  const places = useMemo(() => {
+    const s = new Set<string>();
+    rides.forEach((r) => [r.origin, ...r.waypoints, r.destination].forEach((w) => s.add(w.city)));
+    return [...s].sort((a, b) => a.localeCompare(b, 'es'));
+  }, [rides]);
 
-    const matchesDest = !destination.trim() ||
-      ride.destination.name.toLowerCase().includes(destination.toLowerCase()) ||
-      ride.destination.city.toLowerCase().includes(destination.toLowerCase()) ||
-      ride.waypoints.some(wp => wp.name.toLowerCase().includes(destination.toLowerCase()) || wp.city.toLowerCase().includes(destination.toLowerCase()));
+  const latestBooking = bookings.length ? bookings[bookings.length - 1] : null;
+  const latestBookingFresh = latestBooking ? { ...latestBooking, ride: rideById(latestBooking.ride.id) ?? latestBooking.ride } : null;
 
-    const matchesCityFilter = cityFilter === 'todos' || 
-      ride.origin.city.toLowerCase().includes(cityFilter.toLowerCase()) ||
-      ride.destination.city.toLowerCase().includes(cityFilter.toLowerCase());
-
-    const hasEnoughSeats = ride.availableSeats >= passengers;
-    const matchesDate = selectedDate === 'hoy'
-      ? ride.date.startsWith('Hoy') || ride.date === new Date().toLocaleDateString('sv-SE')
-      : ride.date === selectedDate;
-
-    return matchesOrigin && matchesDest && matchesCityFilter && hasEnoughSeats && matchesDate;
-  });
-
-  const handleBookSuccess = (bookedRide: Ride, seatCount: number) => {
-    setRides(prev => prev.map(r => {
-      if (r.id === bookedRide.id) {
-        return {
-          ...r,
-          availableSeats: Math.max(0, r.availableSeats - seatCount),
-          passengers: [
-            ...r.passengers,
-            {
-              id: `pas-${Date.now()}`,
-              name: 'Tú (Pasajero)',
-              avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80',
-              seatNumber: r.passengers.length + 1,
-              pickupPoint: r.origin.name,
-              status: 'confirmed',
-            }
-          ]
-        };
+  const navigate = useCallback((v: ViewType, anchor?: string) => {
+    const target = hashFor(v);
+    if (window.location.hash !== target) {
+      window.history.pushState(null, '', target);
+    }
+    setView(v);
+    window.requestAnimationFrame(() => {
+      if (anchor) {
+        document.getElementById(anchor)?.scrollIntoView({ block: 'start' });
+      } else {
+        window.scrollTo({ top: 0 });
       }
-      return r;
+    });
+  }, []);
+
+  const searchCorridor = (origin: string, destination: string) => {
+    setQuery({ origin, destination, day: 'any', seats: 1 });
+    navigate('search');
+  };
+
+  const openTrip = (ride: Ride) => {
+    setTripRideId(ride.id);
+    setPassBookingId(null);
+    navigate('telemetry');
+  };
+
+  const confirmBooking = (rideId: string, seats: number, pickupPoint: string, passengerName: string) => {
+    const target = rideById(rideId);
+    if (!target || target.availableSeats < seats) return;
+    const updated: Ride = {
+      ...target,
+      availableSeats: target.availableSeats - seats,
+      passengers: [
+        ...target.passengers,
+        ...Array.from({ length: seats }, (_, i) => ({
+          id: `pax-${Date.now()}-${i}`,
+          name: i === 0 ? passengerName : `${passengerName} (+${i})`,
+          avatar: '',
+          seatNumber: target.passengers.length + i + 1,
+          pickupPoint,
+          status: 'confirmed' as const,
+        })),
+      ],
+    };
+    const pin = String(Math.floor(1000 + Math.random() * 9000));
+    const booking: Booking = {
+      id: `NAR-${Date.now().toString(36).slice(-5).toUpperCase()}`,
+      ride: updated,
+      seatsBooked: seats,
+      totalPrice: Number((target.seatPrice * seats).toFixed(2)),
+      pickupPoint,
+      passengerName,
+      securityPin: `${pin.slice(0, 2)}-${pin.slice(2)}`,
+      createdAt: Date.now(),
+    };
+    setStore((s) => ({
+      rides: s.rides.map((r) => (r.id === rideId ? updated : r)),
+      bookings: [...s.bookings, booking],
     }));
-
-    setDetailRide(null);
-    setPassSeatCount(seatCount);
-    setPassRide(bookedRide);
-    setActiveTelemetryRide(bookedRide);
-    showToast(`¡Asiento reservado con éxito! Tu código QR está listo.`);
+    setSelectedRideId(null);
+    setPassBookingId(booking.id);
+    setTripRideId(updated.id);
+    setToast(`Reserva confirmada: ${target.origin.city} → ${target.destination.city}, ${seats} ${seats === 1 ? 'asiento' : 'asientos'}.`);
   };
 
-  const handlePublishSuccess = (newRide: Ride) => {
-    setRides(prev => [newRide, ...prev]);
-    setIsPublishWizardOpen(false);
-    showToast('¡Tu ruta ha sido publicada! Los pasajeros de la zona podrán verla.');
-    setActiveTab('explore');
-    handleSearch();
+  const publishRide = (ride: Ride) => {
+    setStore((s) => ({ ...s, rides: [ride, ...s.rides] }));
+    setPublishOpen(false);
+    setQuery({ origin: ride.origin.city, destination: ride.destination.city, day: 'any', seats: 1 });
+    navigate('search');
+    setToast(`Publicaste ${ride.origin.city} → ${ride.destination.city} a las ${clock24(ride.departureTime)}.`);
   };
 
-  // Main Page Content depending on active tab
-  const renderContent = () => {
-    return (
-      <div className="w-full">
-        
-        {/* TAB 1: EXPLORAR / INICIO */}
-        {activeTab === 'explore' && (
-          <div className="space-y-10 md:space-y-14">
-            
-            {/* Hero with Visual Search Box and Interactive Route Corridor */}
-            <HeroSearch
-              origin={origin}
-              destination={destination}
-              onOriginChange={setOrigin}
-              onDestinationChange={setDestination}
-              onSwapLocations={handleSwapLocations}
-              selectedDate={selectedDate}
-              onDateChange={setSelectedDate}
-              passengers={passengers}
-              onPassengersChange={setPassengers}
-              onSearch={handleSearch}
-              onOpenPublish={() => setIsPublishWizardOpen(true)}
-            />
-
-            {/* Available Rides Section with Results */}
-            <section ref={resultsRef} className="pt-4 scroll-mt-20">
-              <div className="max-w-6xl mx-auto px-4">
-                
-                {/* Results Section Header */}
-                <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-6">
-                  <div>
-                    <span className="text-xs font-mono font-bold uppercase tracking-wider text-[#9cb3ff] block mb-1">
-                      RUTAS COMPATIBLES EN EL SALVADOR · NAR
-                    </span>
-                    <h2 className="text-2xl sm:text-3xl font-display font-extrabold text-white tracking-tight">
-                      Conductores que ya van por tu camino
-                    </h2>
-                    <p className="text-xs sm:text-sm text-slate-400 mt-1">
-                      Aprovecha asientos en trayectos existentes y viaja sin desvíos de taxi ni paradas de bus
-                    </p>
-                  </div>
-
-                  {/* Quick City Filter Tags */}
-                  <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-1">
-                    {[
-                      { label: 'Todos', val: 'todos' },
-                      { label: 'Santa Ana', val: 'santa ana' },
-                      { label: 'El Tunco / Playa', val: 'libertad' },
-                      { label: 'San Miguel', val: 'san miguel' },
-                      { label: 'Sonsonate', val: 'sonsonate' },
-                    ].map(f => (
-                      <button
-                        key={f.val}
-                        onClick={() => setCityFilter(f.val)}
-                        className={`text-xs px-3 py-1.5 rounded-xl font-medium transition-all shrink-0 ${
-                          cityFilter === f.val
-                            ? 'bg-[#315cff] text-slate-950 font-bold shadow-md'
-                            : 'bg-[#131722] text-slate-400 hover:text-white border border-white/10'
-                        }`}
-                      >
-                        {f.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Ride Cards Grid */}
-                {filteredRides.length > 0 ? (
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 sm:gap-6">
-                    {filteredRides.map(ride => (
-                      <RideCard
-                        key={ride.id}
-                        ride={ride}
-                        onSelect={(r) => setDetailRide(r)}
-                        onOpenLiveTelemetry={(r) => {
-                          setActiveTelemetryRide(r);
-                          setActiveTab('telemetry');
-                        }}
-                      />
-                    ))}
-                  </div>
-                ) : (
-                  <div className="p-10 sm:p-14 text-center bg-[#131722] border border-white/10 rounded-3xl">
-                    <Car className="w-12 h-12 text-slate-500 mx-auto mb-3 opacity-60" />
-                    <h3 className="text-lg font-display font-bold text-white">
-                      No hay rutas para este filtro en este momento
-                    </h3>
-                    <p className="text-xs sm:text-sm text-slate-400 mt-1.5 max-w-md mx-auto">
-                      ¿Vas a viajar en tu auto? Publica tus asientos y comparte la gasolina con personas de tu zona.
-                    </p>
-                    <button
-                      onClick={() => setIsPublishWizardOpen(true)}
-                      className="mt-5 px-6 py-2.5 rounded-xl text-xs sm:text-sm font-bold text-slate-950 bg-gradient-to-r from-[#315cff] to-[#00a89d] hover:from-[#4d77ff] hover:to-[#22c4b7] shadow-md shadow-[#315cff]/20"
-                    >
-                      Publicar Mi Asiento Ahora
-                    </button>
-                  </div>
-                )}
-
-              </div>
-            </section>
-
-            {/* Popular Routes 1-click exploration */}
-            <PopularRoutesSection
-              routes={popularRoutes}
-              onSelectRoute={handleSelectPopularRoute}
-            />
-
-            {/* Visual 3 Steps - No text overload */}
-            <HowItWorksVisual />
-
-            {/* Trust and Safety Section */}
-            <TrustSafetySection />
-
-          </div>
-        )}
-
-        {/* TAB 2: BUSCADOR AVANZADO */}
-        {activeTab === 'search' && (
-          <Suspense fallback={<div className="p-8 text-slate-400">Cargando buscador…</div>}><SearchView
-            rides={rides}
-            onSelectRide={(r) => setDetailRide(r)}
-            onOpenLiveTelemetry={(r) => {
-              setActiveTelemetryRide(r);
-              setActiveTab('telemetry');
-            }}
-            initialOrigin={origin}
-            initialDestination={destination}
-          /></Suspense>
-        )}
-
-        {/* TAB 3: TELEMETRÍA EN VIVO */}
-        {activeTab === 'telemetry' && (
-          <div className="py-6 px-4">
-            <Suspense fallback={<div className="p-8 text-slate-400">Cargando ruta…</div>}><LiveTelemetryView
-              ride={activeTelemetryRide}
-              onOpenPass={() => setPassRide(activeTelemetryRide)}
-              onOpenChat={() => setChatRide(activeTelemetryRide)}
-            /></Suspense>
-          </div>
-        )}
-
-        {/* TAB 4: PERFIL & CONFIANZA */}
-        {activeTab === 'profile' && (
-          <Suspense fallback={<div className="p-8 text-slate-400">Cargando perfil…</div>}><ProfileView
-            onOpenPublish={() => setIsPublishWizardOpen(true)}
-            onExploreRides={() => setActiveTab('explore')}
-          /></Suspense>
-        )}
-
-      </div>
-    );
+  const resetDemo = () => {
+    setStore({ rides: INITIAL_RIDES, bookings: [] });
+    setTripRideId(null);
+    setQuery(EMPTY_QUERY);
+    setToast('Datos de demostración restablecidos.');
   };
+
+  const passBooking = bookings.find((b) => b.id === passBookingId) ?? null;
+  const tripRide =
+    rideById(tripRideId) ?? (latestBookingFresh ? latestBookingFresh.ride : null);
+  const freshBookings = bookings.map((b) => ({ ...b, ride: rideById(b.ride.id) ?? b.ride }));
+
+  const fallback = (
+    <div className="container-nar pt-[160px] pb-32 flex justify-center" aria-busy="true">
+      <LatticeLoader label="Cargando" color="#21d2ed" doneColor="#00c29a" />
+    </div>
+  );
+
+  let content: React.ReactNode;
+  switch (view) {
+    case 'search':
+      content = (
+        <SearchView
+          rides={rides}
+          places={places}
+          query={query}
+          onQueryChange={setQuery}
+          onSelectRide={(r) => setSelectedRideId(r.id)}
+          onOpenPublish={() => setPublishOpen(true)}
+        />
+      );
+      break;
+    case 'corridors':
+      content = (
+        <CorridorsView
+          corridors={corridors}
+          onSelectCorridor={searchCorridor}
+          onSelectRide={(r) => setSelectedRideId(r.id)}
+          onOpenPublish={() => setPublishOpen(true)}
+        />
+      );
+      break;
+    case 'telemetry':
+      content = (
+        <LiveTripView
+          ride={tripRide}
+          rides={rides}
+          bookings={freshBookings}
+          onSelectRide={(r) => setTripRideId(r.id)}
+          onOpenPass={(b) => setPassBookingId(b.id)}
+          onOpenChat={(r) => setChatRideId(r.id)}
+          onViewRide={(r) => setSelectedRideId(r.id)}
+          onSearch={() => navigate('search')}
+        />
+      );
+      break;
+    case 'profile':
+      content = (
+        <ProfileView
+          rides={rides}
+          bookings={freshBookings}
+          onOpenPublish={() => setPublishOpen(true)}
+          onSearch={() => navigate('search')}
+          onOpenPass={(b) => setPassBookingId(b.id)}
+          onOpenTrip={openTrip}
+          onOpenChat={(r) => setChatRideId(r.id)}
+          onViewRide={(r) => setSelectedRideId(r.id)}
+          onResetDemo={resetDemo}
+        />
+      );
+      break;
+    default:
+      content = (
+        <HomeView
+          rides={rides}
+          corridors={corridors}
+          places={places}
+          query={query}
+          onQueryChange={setQuery}
+          onSearch={(q) => {
+            setQuery(q);
+            navigate('search');
+          }}
+          onSelectRide={(r) => setSelectedRideId(r.id)}
+          onOpenPublish={() => setPublishOpen(true)}
+          onSelectCorridor={searchCorridor}
+          onBrowseAll={() => navigate('search')}
+          activeBooking={latestBookingFresh}
+          onOpenPass={() => latestBooking && setPassBookingId(latestBooking.id)}
+          onTrackBooking={() => latestBookingFresh && openTrip(latestBookingFresh.ride)}
+        />
+      );
+  }
 
   return (
-    <div className="min-h-screen bg-[#0c1017] text-slate-100 flex flex-col font-body antialiased pb-20 md:pb-0 selection:bg-[#315cff]/30 selection:text-white">
-      
-      {/* Toast Notification */}
-      {toastMessage && (
-        <div className="fixed top-4 right-4 z-50 bg-[#161d2d] border border-[#315cff] text-white text-xs px-4 py-3 rounded-2xl shadow-2xl flex items-center gap-2.5 animate-in fade-in slide-in-from-top-4 duration-200">
-          <CheckCircle2 className="w-4 h-4 text-[#9cb3ff] shrink-0" />
-          <span>{toastMessage}</span>
-        </div>
-      )}
+    <div className="relative min-h-dvh flex flex-col">
+      <AmbientBackground view={view} />
+      <a
+        href="#main"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-[200] focus:px-4 focus:py-2 focus:rounded-[10px] focus:bg-white focus:text-ink"
+      >
+        Saltar al contenido
+      </a>
 
-      {/* Top Navbar */}
       <Navbar
-        mode={mode}
-        onModeChange={(m) => {
-          setMode(m);
-          if (m === 'offer') setIsPublishWizardOpen(true);
-        }}
-        activeView={activeTab}
-        onViewChange={(tab) => {
-          if (tab === 'publish') {
-            setIsPublishWizardOpen(true);
-          } else {
-            setActiveTab(tab);
-          }
-        }}
-        onOpenPublish={() => setIsPublishWizardOpen(true)}
-        isMobileMockup={isMobileMockup}
-        onToggleMockup={() => setIsMobileMockup(!isMobileMockup)}
+        activeView={view}
+        onNavigate={(v) => navigate(v)}
+        onOpenPublish={() => setPublishOpen(true)}
+        activeTripCount={bookings.length}
       />
 
-      {!detailRide && !isPublishWizardOpen && !passRide && !chatRide && <div className="nar-staggered-menu lg:hidden">
-        <Suspense fallback={null}>
-          <StaggeredMenu
-            isFixed
-            colors={['#315cff', '#00a89d']}
-            items={[
-              { label: 'Explorar', ariaLabel: 'Explorar rutas', view: 'explore' },
-              { label: 'Buscar', ariaLabel: 'Buscar viajes', view: 'search' },
-              { label: 'En vivo', ariaLabel: 'Ver la ruta en vivo', view: 'telemetry' },
-              { label: 'Mi perfil', ariaLabel: 'Ver mi perfil', view: 'profile' },
-              { label: 'Publicar', ariaLabel: 'Publicar un viaje', view: 'publish' },
-            ]}
-            onItemClick={(item: { view: TabType }) => item.view === 'publish' ? setIsPublishWizardOpen(true) : setActiveTab(item.view)}
-            displaySocials={false}
-            menuButtonColor="#ffffff"
-            openMenuButtonColor="#ffffff"
-            accentColor="#9cb3ff"
-          />
-        </Suspense>
-      </div>}
-
-      {/* Main Body */}
-      <main className="flex-1 w-full">
-        {isMobileMockup ? (
-          /* Phone Frame Mockup View (Ref 1 & 2 Style) */
-          <div className="flex flex-col items-center justify-center my-4 px-2">
-            
-            <div className="mb-3 flex items-center gap-2 text-xs text-slate-400 font-mono">
-              <span className="w-2 h-2 rounded-full bg-[#315cff]" />
-              <span>Simulador Móvil NAR (390 x 844 px)</span>
-              <button 
-                onClick={() => setIsMobileMockup(false)}
-                className="text-[#c4cfff] hover:underline ml-2"
-              >
-                Pantalla completa
-              </button>
-            </div>
-
-            <div className="w-[390px] h-[844px] bg-[#0c1017] border-4 border-slate-700 rounded-[48px] shadow-2xl shadow-black relative overflow-hidden flex flex-col ring-1 ring-white/10">
-              
-              {/* Dynamic Island / Top Bezel */}
-              <div className="h-10 bg-[#0c1017] px-6 flex items-center justify-between z-30 shrink-0 border-b border-white/5">
-                <span className="text-[12px] font-mono text-white font-semibold">07:15</span>
-                <div className="w-24 h-4 bg-black rounded-full mx-auto" />
-                <div className="flex items-center gap-1.5 text-xs text-slate-300">
-                  <Wifi className="w-3.5 h-3.5 text-[#9cb3ff]" />
-                  <BatteryMedium className="w-3.5 h-3.5 text-white" />
-                </div>
-              </div>
-
-              {/* Scrollable Container */}
-              <div className="flex-1 overflow-y-auto p-3 space-y-4">
-                {renderContent()}
-              </div>
-
-              {/* Bottom Mobile Bar inside chassis */}
-              <div className="h-14 bg-[#131722]/95 border-t border-white/10 px-3 flex items-center justify-around z-30 shrink-0">
-                <button
-                  onClick={() => setActiveTab('explore')}
-                  className={`flex flex-col items-center gap-0.5 text-[10px] ${
-                    activeTab === 'explore' ? 'text-[#9cb3ff] font-bold' : 'text-slate-400'
-                  }`}
-                >
-                  <Logo size="sm" showWordmark={false} />
-                  <span>Rutas</span>
-                </button>
-
-                <button
-                  onClick={() => setActiveTab('search')}
-                  className={`flex flex-col items-center gap-0.5 text-[10px] ${
-                    activeTab === 'search' ? 'text-[#9cb3ff] font-bold' : 'text-slate-400'
-                  }`}
-                >
-                  <Search className="w-4 h-4" />
-                  <span>Buscar</span>
-                </button>
-
-                <button
-                  onClick={() => setIsPublishWizardOpen(true)}
-                  className="w-10 h-10 -mt-5 rounded-full bg-[#315cff] border-2 border-[#0c1017] flex items-center justify-center text-slate-950 shadow-lg"
-                  aria-label="Publicar"
-                >
-                  <Car className="w-5 h-5" />
-                </button>
-
-                <button
-                  onClick={() => setActiveTab('telemetry')}
-                  className={`flex flex-col items-center gap-0.5 text-[10px] ${
-                    activeTab === 'telemetry' ? 'text-[#9cb3ff] font-bold' : 'text-slate-400'
-                  }`}
-                >
-                  <Radio className="w-4 h-4" />
-                  <span>En Vivo</span>
-                </button>
-
-                <button
-                  onClick={() => setActiveTab('profile')}
-                  className={`flex flex-col items-center gap-0.5 text-[10px] ${
-                    activeTab === 'profile' ? 'text-emerald-400 font-bold' : 'text-slate-400'
-                  }`}
-                >
-                  <ShieldCheck className="w-4 h-4" />
-                  <span>Perfil</span>
-                </button>
-              </div>
-
-            </div>
-
-          </div>
-        ) : (
-          /* Full Viewport Clean Experience */
-          <div>
-            {renderContent()}
-          </div>
-        )}
+      <main id="main" tabIndex={-1} className="relative z-[1] flex-1 focus:outline-none">
+        <Suspense fallback={fallback}>{content}</Suspense>
       </main>
 
-      {/* Floating Bottom Nav for Real Mobile Devices (< 768px) */}
-      {!isMobileMockup && (
-        <BottomNav
-          activeTab={activeTab}
-          onTabChange={(tab) => {
-            if (tab === 'publish') {
-              setIsPublishWizardOpen(true);
-            } else {
-              setActiveTab(tab);
-            }
-          }}
-          hasActiveTrip={activeTelemetryRide.status === 'in_progress'}
-        />
-      )}
+      <Footer onNavigate={navigate} onOpenPublish={() => setPublishOpen(true)} onSelectCorridor={searchCorridor} corridors={corridors} />
 
-      {/* Ride Detail & Booking Modal */}
-      {detailRide && (
-        <Suspense fallback={null}><RideDetailModal
-          ride={detailRide}
-          onClose={() => setDetailRide(null)}
-          onBookSuccess={handleBookSuccess}
-          onOpenLiveView={(ride) => {
-            setActiveTelemetryRide(ride);
-            setActiveTab('telemetry');
-          }}
-        /></Suspense>
-      )}
+      <BottomNav activeView={view} onNavigate={(v) => navigate(v)} hasActiveTrip={bookings.length > 0} />
 
-      {/* Driver Wizard Progressive Publish Modal (Ref 4 Style) */}
-      {isPublishWizardOpen && (
-        <Suspense fallback={null}><PublishRideWizardModal
-          onClose={() => setIsPublishWizardOpen(false)}
-          onPublish={handlePublishSuccess}
-        /></Suspense>
-      )}
-
-      {/* Digital Boarding Pass Modal */}
-      {passRide && (
-        <Suspense fallback={null}><DigitalBoardingPassModal
-          ride={passRide}
-          seatNumber={passSeatCount}
-          onClose={() => setPassRide(null)}
-        /></Suspense>
-      )}
-
-      {/* Encrypted In-Ride Chat Modal */}
-      {chatRide && (
-        <Suspense fallback={null}><RideChatModal
-          ride={chatRide}
-          onClose={() => setChatRide(null)}
-        /></Suspense>
-      )}
-
-      {/* Footer */}
-      <footer className="border-t border-white/10 py-10 px-4 sm:px-6 lg:px-8 bg-[#090c13] text-xs text-slate-400 mt-16 mb-16 md:mb-0">
-        <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-6">
-          <div className="flex items-center gap-3">
-            <Logo size="sm" showWordmark={true} />
-            <span className="text-slate-500">|</span>
-            <span className="text-slate-400">NAR · Red de viajes compartidos en El Salvador</span>
-          </div>
-          <div className="flex items-center gap-4 text-[11px] font-mono text-slate-400 flex-wrap justify-center">
-            <span className="text-emerald-400">✓ DUI Verificado</span>
-            <span>·</span>
-            <span className="text-[#c4cfff]">Aporte Justo en USD</span>
-            <span>·</span>
-            <span>Carretera Los Chorros & Panamericana</span>
-          </div>
+      {toast && !selectedRideId && !publishOpen && !passBooking && !chatRideId ? (
+        <div role="status" aria-live="polite" className="fixed z-[120] left-4 right-4 sm:left-auto sm:right-6 bottom-[84px] lg:bottom-6 sm:w-[400px]">
+          <SwipeToast
+            key={toast}
+            inline
+            open
+            title="Listo"
+            description={toast}
+            icon={<CheckCircle2 className="w-5 h-5 text-success" aria-hidden="true" />}
+            background="#141416"
+            color="#ffffff"
+            fuseColor="#21d2ed"
+            width={400}
+            radius={14}
+            duration={4500}
+            closeButton
+            onClose={() => setToast(null)}
+          />
         </div>
-      </footer>
+      ) : null}
 
+      <Suspense fallback={null}>
+        {selectedRideId ? (
+          <RideDetailModal
+            ride={rideById(selectedRideId)}
+            defaultSeats={query.seats}
+            onClose={() => setSelectedRideId(null)}
+            onConfirmBooking={confirmBooking}
+            onOpenChat={(r) => {
+              setSelectedRideId(null);
+              setChatRideId(r.id);
+            }}
+          />
+        ) : null}
+        {publishOpen ? <PublishRideWizardModal isOpen onClose={() => setPublishOpen(false)} onPublish={publishRide} /> : null}
+        {passBooking ? (
+          <BoardingPassModal
+            booking={{ ...passBooking, ride: rideById(passBooking.ride.id) ?? passBooking.ride }}
+            onClose={() => setPassBookingId(null)}
+            onOpenTrip={openTrip}
+            onOpenChat={(r) => {
+              setPassBookingId(null);
+              setChatRideId(r.id);
+            }}
+          />
+        ) : null}
+        {chatRideId ? <RideChatModal ride={rideById(chatRideId)} onClose={() => setChatRideId(null)} /> : null}
+      </Suspense>
     </div>
   );
 }
+
+export default App;

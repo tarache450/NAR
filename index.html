@@ -1,21 +1,105 @@
 <!doctype html>
-<html lang="es">
+<html lang="es-SV" class="dark">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>NAR - Viajes Compartidos en El Salvador</title>
-    <meta name="description" content="NAR es la plataforma de movilidad compartida en El Salvador. Conecta con personas que ya van por tu misma ruta y viaja seguro compartiendo gastos." />
-    <meta property="og:title" content="NAR - Viajes Compartidos en El Salvador" />
-    <meta property="og:description" content="NAR es la plataforma de movilidad compartida en El Salvador. Conecta con personas que ya van por tu misma ruta y viaja seguro compartiendo gastos." />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>NAR — Viajes Compartidos y Carpooling Verificado en El Salvador</title>
+    <meta name="description" content="NAR es la red de viajes compartidos y movilidad colaborativa en El Salvador. Conecta con conductores verificados con DUI que ya van por tu misma ruta y divide gastos de gasolina en USD." />
+    <meta name="robots" content="index, follow, max-image-preview:large" />
+    <meta name="theme-color" content="#0d0d0f" />
+    <meta name="referrer" content="strict-origin-when-cross-origin" />
+    <meta name="author" content="NAR El Salvador" />
+    <link rel="canonical" href="https://nar-sv.pages.dev/" />
+    <link rel="icon" type="image/svg+xml" href="/logo.svg" />
+
+    <!-- Open Graph / Social -->
+    <meta property="og:locale" content="es_SV" />
+    <meta property="og:site_name" content="NAR El Salvador" />
+    <meta property="og:title" content="NAR — Viajes Compartidos y Carpooling Verificado en El Salvador" />
+    <meta property="og:description" content="Conecta con personas verificadas con DUI que ya van por tu misma ruta en El Salvador. Comparte gastos de gasolina en trayectos diarios e interurbanos." />
     <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://nar-sv.pages.dev/" />
+    <meta property="og:image" content="https://nar-sv.pages.dev/logo.svg" />
+
+    <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="NAR — Viajes Compartidos en El Salvador" />
+    <meta name="twitter:description" content="Viaja seguro compartiendo gastos con conductores verificados con DUI en rutas como San Salvador, Santa Ana, La Libertad, San Miguel y Sonsonate." />
+    <meta name="twitter:image" content="https://nar-sv.pages.dev/logo.svg" />
+
+    <!-- Tipografía única del sistema Verity: Onest -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500&display=swap" rel="stylesheet" />
+
+    <!-- Datos Estructurados Schema.org (JSON-LD) -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "Organization",
+            "@id": "https://nar-sv.pages.dev/#organization",
+            "name": "NAR El Salvador",
+            "url": "https://nar-sv.pages.dev/",
+            "logo": "https://nar-sv.pages.dev/logo.svg",
+            "areaServed": {
+              "@type": "Country",
+              "name": "El Salvador"
+            },
+            "description": "Plataforma de viajes compartidos (carpooling) con verificación de DUI y teléfono +503 en El Salvador."
+          },
+          {
+            "@type": "WebApplication",
+            "@id": "https://nar-sv.pages.dev/#webapp",
+            "name": "NAR — Viajes Compartidos SV",
+            "url": "https://nar-sv.pages.dev/",
+            "applicationCategory": "TravelApplication",
+            "operatingSystem": "Web, iOS, Android",
+            "inLanguage": "es-SV",
+            "offers": {
+              "@type": "AggregateOffer",
+              "priceCurrency": "USD",
+              "lowPrice": "3.00",
+              "highPrice": "5.00",
+              "offerCount": "4"
+            },
+            "publisher": {
+              "@id": "https://nar-sv.pages.dev/#organization"
+            }
+          },
+          {
+            "@type": "ItemList",
+            "name": "Rutas Principales de Carpooling en El Salvador",
+            "itemListElement": [
+              {
+                "@type": "ListItem",
+                "position": 1,
+                "name": "San Salvador a Santa Ana (vía Santa Tecla y Lourdes Colón)"
+              },
+              {
+                "@type": "ListItem",
+                "position": 2,
+                "name": "San Salvador a La Libertad / Playa El Tunco (vía Zaragoza)"
+              },
+              {
+                "@type": "ListItem",
+                "position": 3,
+                "name": "San Salvador a San Miguel (vía Cojutepeque y San Vicente)"
+              },
+              {
+                "@type": "ListItem",
+                "position": 4,
+                "name": "Santa Tecla a Sonsonate / Ruta de las Flores (vía Armenia e Izalco)"
+              }
+            ]
+          }
+        ]
+      }
+    </script>
   </head>
-  <body class="bg-[#101319] text-[#e1e2ea] antialiased selection:bg-[#315cff]/30 selection:text-white">
+  <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
-

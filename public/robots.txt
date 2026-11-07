@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://nar-sv.pages.dev/sitemap.xml
+

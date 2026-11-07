@@ -1,111 +1,52 @@
 import React from 'react';
-import { 
-  Compass, 
-  Search, 
-  PlusCircle, 
-  Radio, 
-  UserCheck 
-} from 'lucide-react';
-
-export type TabType = 'explore' | 'search' | 'publish' | 'telemetry' | 'profile';
+import { Home, Search, Map, Navigation, User } from 'lucide-react';
+import { cx } from './ui/primitives';
+import type { ViewType } from '../lib/nav';
 
 interface BottomNavProps {
-  activeTab: TabType;
-  onTabChange: (tab: TabType) => void;
-  hasActiveTrip?: boolean;
+  activeView: ViewType;
+  onNavigate: (view: ViewType) => void;
+  hasActiveTrip: boolean;
 }
 
-export const BottomNav: React.FC<BottomNavProps> = ({
-  activeTab,
-  onTabChange,
-  hasActiveTrip = true,
-}) => {
-  return (
-    <nav 
-      aria-label="Navegación principal móvil"
-      className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-[#0c1017]/95 backdrop-blur-xl border-t border-white/10 px-2 pt-1 pb-[max(0.5rem,env(safe-area-inset-bottom))] shadow-2xl select-none"
-    >
-      <div className="grid grid-cols-5 items-center max-w-md mx-auto">
-        
-        {/* Tab 1: Explorar Rutas */}
-        <button
-          type="button"
-          onClick={() => onTabChange('explore')}
-          className={`min-h-[48px] flex flex-col items-center justify-center gap-1 transition-all ${
-            activeTab === 'explore'
-              ? 'text-[#9cb3ff] font-bold'
-              : 'text-slate-400 hover:text-slate-200'
-          }`}
-        >
-          <Compass className="w-5 h-5" />
-          <span className="text-[10px] tracking-tight leading-none">Rutas</span>
-        </button>
+const ITEMS: { view: ViewType; label: string; Icon: typeof Home }[] = [
+  { view: 'explore', label: 'Inicio', Icon: Home },
+  { view: 'search', label: 'Buscar', Icon: Search },
+  { view: 'corridors', label: 'Corredores', Icon: Map },
+  { view: 'telemetry', label: 'Mi viaje', Icon: Navigation },
+  { view: 'profile', label: 'Perfil', Icon: User },
+];
 
-        {/* Tab 2: Buscar Específico */}
-        <button
-          type="button"
-          onClick={() => onTabChange('search')}
-          className={`min-h-[48px] flex flex-col items-center justify-center gap-1 transition-all ${
-            activeTab === 'search'
-              ? 'text-[#9cb3ff] font-bold'
-              : 'text-slate-400 hover:text-slate-200'
-          }`}
-        >
-          <Search className="w-5 h-5" />
-          <span className="text-[10px] tracking-tight leading-none">Buscar</span>
-        </button>
-
-        {/* Tab 3: Publicar Asiento (Central Prominent Button) */}
-        <button
-          type="button"
-          onClick={() => onTabChange('publish')}
-          className="min-h-[48px] flex flex-col items-center justify-center -mt-4 group focus:outline-none"
-          aria-label="Publicar Asiento de tu viaje"
-        >
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-[#2563eb] via-[#1ea2dc] to-[#00a89d] p-0.5 shadow-xl shadow-[#315cff]/25 group-active:scale-95 transition-transform flex items-center justify-center">
-            <div className="w-full h-full bg-[#0c1017] rounded-[14px] flex items-center justify-center text-[#9cb3ff] group-hover:text-white transition-colors">
-              <PlusCircle className="w-6 h-6" />
-            </div>
-          </div>
-          <span className="text-[10px] text-[#c4cfff] font-bold tracking-tight mt-1 leading-none">
-            Publicar
-          </span>
-        </button>
-
-        {/* Tab 4: En Vivo */}
-        <button
-          type="button"
-          onClick={() => onTabChange('telemetry')}
-          className={`min-h-[48px] flex flex-col items-center justify-center gap-1 relative transition-all ${
-            activeTab === 'telemetry'
-              ? 'text-[#9cb3ff] font-bold'
-              : 'text-slate-400 hover:text-slate-200'
-          }`}
-        >
-          <div className="relative">
-            <Radio className="w-5 h-5" />
-            {hasActiveTrip && (
-              <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-[#315cff] animate-ping" />
-            )}
-          </div>
-          <span className="text-[10px] tracking-tight leading-none">En Vivo</span>
-        </button>
-
-        {/* Tab 5: Perfil / Seguridad */}
-        <button
-          type="button"
-          onClick={() => onTabChange('profile')}
-          className={`min-h-[48px] flex flex-col items-center justify-center gap-1 transition-all ${
-            activeTab === 'profile'
-              ? 'text-emerald-400 font-bold'
-              : 'text-slate-400 hover:text-slate-200'
-          }`}
-        >
-          <UserCheck className="w-5 h-5" />
-          <span className="text-[10px] tracking-tight leading-none">Perfil</span>
-        </button>
-
-      </div>
-    </nav>
-  );
-};
+export const BottomNav: React.FC<BottomNavProps> = ({ activeView, onNavigate, hasActiveTrip }) => (
+  <nav
+    aria-label="Navegación móvil"
+    className="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-bg/90 backdrop-blur-md border-t border-line pb-[env(safe-area-inset-bottom)]"
+  >
+    <ul className="grid grid-cols-5 max-w-md mx-auto">
+      {ITEMS.map(({ view, label, Icon }) => {
+        const active = view === activeView;
+        return (
+          <li key={view}>
+            <button
+              type="button"
+              onClick={() => onNavigate(view)}
+              aria-current={active ? 'page' : undefined}
+              className={cx(
+                'relative w-full h-[60px] flex flex-col items-center justify-center gap-1 text-[11px] transition-colors',
+                active ? 'text-fg' : 'text-subtle hover:text-fg'
+              )}
+            >
+              <span className="relative">
+                <Icon className={cx('w-5 h-5', active && 'text-accent')} strokeWidth={1.75} />
+                {view === 'telemetry' && hasActiveTrip ? (
+                  <span className="absolute -top-0.5 -right-1 w-2 h-2 rounded-full bg-accent" aria-label="Reserva activa" />
+                ) : null}
+              </span>
+              {label}
+            </button>
+          </li>
+        );
+      })}
+    </ul>
+  </nav>
+);

@@ -1,288 +1,299 @@
-import React, { useState } from 'react';
-import { AvatarGroupHover } from './AvatarGroupHover';
-import PeekRatingSource from './reactbits/PeekRating';
-const PeekRating = PeekRatingSource as React.ComponentType<any>;
-import { Ride } from '../types';
-import { 
-  X, 
-  ShieldCheck, 
-  Zap, 
-  MapPin, 
-  Clock, 
-  Users, 
-  CheckCircle2, 
-  CreditCard,
-  Phone,
-  MessageCircle,
-  Car,
-  Star,
-  Sparkles,
-  ArrowRight
-} from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { Car, MessageSquare, Phone, ShieldCheck, Star, Info } from 'lucide-react';
+import type { Ride } from '../types';
+import { Avatar, Badge, Button, Field, Modal, Stepper, cx, inputClass } from './ui/primitives';
+import { clock24, usd } from '../lib/rides';
+import Counter from './bits/Counter';
+import ClickSpark from './bits/ClickSpark';
 
 interface RideDetailModalProps {
-  ride: Ride;
+  ride: Ride | null;
+  defaultSeats?: number;
   onClose: () => void;
-  onBookSuccess: (ride: Ride, seatNumber: number) => void;
-  onOpenLiveView: (ride: Ride) => void;
+  onConfirmBooking: (rideId: string, seats: number, pickupPoint: string, passengerName: string) => void;
+  onOpenChat: (ride: Ride) => void;
 }
+
+export const RouteTimeline: React.FC<{ ride: Ride }> = ({ ride }) => {
+  const stops = [ride.origin, ...ride.waypoints, ride.destination];
+  return (
+    <ol className="relative">
+      {stops.map((s, i) => {
+        const first = i === 0;
+        const last = i === stops.length - 1;
+        return (
+          <li key={s.id} className="grid grid-cols-[64px_20px_1fr] gap-x-3">
+            <span className={cx('tabular text-[15px] pt-0.5', !first && !last && 'text-muted text-[14px]')}>
+              {clock24(first ? ride.departureTime : last ? ride.arrivalTime : s.time)}
+            </span>
+            <span className="relative flex justify-center" aria-hidden="true">
+              <span
+                className={cx(
+                  'relative z-10 mt-1.5 rounded-full',
+                  first ? 'w-3 h-3 border-2 border-accent bg-surface' : last ? 'w-3 h-3 bg-white' : 'w-2 h-2 mt-2 bg-white/40'
+                )}
+              />
+              {!last ? <span className="absolute top-3 bottom-0 w-px bg-white/15" /> : null}
+            </span>
+            <div className={cx('min-w-0', !last && 'pb-5')}>
+              <p className={cx(first || last ? 'text-[16px]' : 'text-[15px] text-fg/90')}>{s.name}</p>
+              <p className="t-small text-muted">
+                {s.name.toLowerCase().includes(s.city.toLowerCase()) ? '' : `${s.city} · `}
+                {s.address}
+              </p>
+            </div>
+          </li>
+        );
+      })}
+    </ol>
+  );
+};
 
 export const RideDetailModal: React.FC<RideDetailModalProps> = ({
   ride,
+  defaultSeats = 1,
   onClose,
-  onBookSuccess,
-  onOpenLiveView,
+  onConfirmBooking,
+  onOpenChat,
 }) => {
-  const [selectedSeatCount, setSelectedSeatCount] = useState<number>(1);
-  const [isBooking, setIsBooking] = useState<boolean>(false);
+  const [seats, setSeats] = useState(1);
+  const [pickup, setPickup] = useState('');
+  const [name, setName] = useState('');
+  const [nameError, setNameError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
 
-  const totalPrice = ride.seatPrice * selectedSeatCount;
+  useEffect(() => {
+    if (!ride) return;
+    setSeats(Math.max(1, Math.min(defaultSeats, ride.availableSeats || 1)));
+    setPickup(`${ride.origin.name} (${ride.origin.city})`);
+    setNameError(null);
+    setSubmitting(false);
+  }, [ride, defaultSeats]);
 
-  const handleConfirm = () => {
-    setIsBooking(true);
-    setTimeout(() => {
-      onBookSuccess(ride, selectedSeatCount);
-    }, 1000);
+  if (!ride) return null;
+
+  const full = ride.availableSeats <= 0;
+  const maxSeats = Math.max(1, Math.min(4, ride.availableSeats));
+  const total = ride.seatPrice * seats;
+  const pickupOptions = [
+    { value: `${ride.origin.name} (${ride.origin.city})`, time: clock24(ride.departureTime), label: `${ride.origin.name}`, city: ride.origin.city },
+    ...ride.waypoints.map((w) => ({ value: `${w.name} (${w.city})`, time: clock24(w.time), label: w.name, city: w.city })),
+  ];
+
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (full) return;
+    const clean = name.trim();
+    if (clean.length < 3) {
+      setNameError('Escribe el nombre de quien viaja (al menos 3 letras). Lo verá el conductor.');
+      window.requestAnimationFrame(() => document.querySelector<HTMLElement>('#booking-form [aria-invalid="true"]')?.focus());
+      return;
+    }
+    setSubmitting(true);
+    window.setTimeout(() => onConfirmBooking(ride.id, seats, pickup, clean), 450);
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/80 backdrop-blur-md overflow-y-auto">
-      <div className="relative w-full max-w-xl bg-[#131722] border border-white/10 rounded-3xl overflow-hidden shadow-2xl my-auto animate-in fade-in zoom-in-95 duration-200">
-        
-        {/* Close Button */}
-        <button
-          onClick={onClose}
-          aria-label="Cerrar detalle de ruta"
-          className="absolute top-4 right-4 z-20 w-11 h-11 rounded-full bg-[#0c0f17]/80 border border-white/10 flex items-center justify-center text-slate-300 hover:text-white transition-colors"
-        >
-          <X className="w-4 h-4" />
-        </button>
+    <Modal
+      open
+      size="lg"
+      onClose={onClose}
+      eyebrow={`${ride.date}${ride.isRecurring && ride.recurringDays ? ` · ${ride.recurringDays}` : ''}`}
+      title={`${ride.origin.city} → ${ride.destination.city}`}
+      footer={
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:justify-between">
+          <div className="flex items-baseline justify-between sm:block">
+            <p className="t-small text-muted">
+              Total · {seats} × {usd(ride.seatPrice)}
+            </p>
+            <p className="t-h4 tabular leading-tight" aria-live="polite">
+              <span className="sr-only">{usd(total)}</span>
+              <span aria-hidden="true">
+                <Counter value={total} decimals={2} prefix="$" fontSize="inherit" fontWeight={400} textColor="#ffffff" tabular intro={false} />
+              </span>
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => onOpenChat(ride)} className="flex-1 sm:flex-none">
+              <MessageSquare className="w-4 h-4" aria-hidden="true" />
+              Escribir
+            </Button>
+            <div className="flex-[2] sm:flex-none sm:w-[220px]">
+              <ClickSpark sparkColor="#21d2ed" sparkCount={12} sparkRadius={26} duration={480} disabled={full}>
+                <Button type="submit" form="booking-form" disabled={full} loading={submitting} block>
+                  {full ? 'Sin asientos libres' : submitting ? 'Reservando…' : 'Reservar asiento'}
+                </Button>
+              </ClickSpark>
+            </div>
+          </div>
+        </div>
+      }
+    >
+      <div className="grid gap-6 md:grid-cols-[1.15fr_1fr]">
+        <div className="flex flex-col gap-6">
+          <section aria-label="Recorrido" className="surface-inset p-5">
+            <div className="flex flex-wrap gap-2 mb-5">
+              <Badge className="tabular">{ride.estimatedDuration}</Badge>
+              {ride.distanceKm > 0 ? <Badge className="tabular">{ride.distanceKm} km</Badge> : null}
+              {ride.status === 'in_progress' ? <Badge tone="accent">En ruta</Badge> : null}
+            </div>
+            <RouteTimeline ride={ride} />
+          </section>
 
-        {/* Header: Driver Banner (Ref 1 Style) */}
-        <div className="p-5 sm:p-6 bg-gradient-to-b from-[#1c2233] to-[#131722] border-b border-white/10">
-          <div className="flex items-start justify-between gap-4">
-            
-            {/* Driver Profile */}
-            <div className="flex items-center gap-3.5">
-              <div className="relative">
-                <img 
-                  src={ride.driver.avatar} 
-                  alt={ride.driver.name} 
-                  className="w-14 h-14 rounded-2xl object-cover border-2 border-[#315cff]/40 shadow-lg shadow-[#315cff]/10"
-                />
-                <div 
-                  className="absolute -bottom-1 -right-1 w-5 h-5 bg-emerald-500 text-white rounded-full flex items-center justify-center text-[10px] font-bold border-2 border-[#131722]"
-                  title="Identidad DUI Verificada"
-                >
-                  ✓
-                </div>
-              </div>
-
-              <div>
-                <div className="flex items-center gap-2">
-                  <h2 className="text-base sm:text-lg font-display font-extrabold text-white">
-                    {ride.driver.name}
-                  </h2>
-                  <span className="text-xs font-bold text-yellow-400 bg-yellow-400/10 px-2 py-0.5 rounded-lg border border-yellow-400/20">{ride.driver.rating.toFixed(2)} / 5</span>
-                </div>
-                <p className="text-xs text-slate-400 mt-0.5">
-                  Conduce un <strong className="text-white">{ride.vehicle.make} {ride.vehicle.model}</strong> ({ride.vehicle.color})
+          <section aria-label="Conductor" className="surface-inset p-5 flex flex-col gap-4">
+            <div className="flex items-center gap-4">
+              <Avatar src={ride.driver.avatar} name={ride.driver.name} size={56} />
+              <div className="min-w-0">
+                <p className="t-h6 truncate">{ride.driver.name}</p>
+                <p className="t-small text-muted truncate">{ride.driver.affiliation}</p>
+                <p className="t-small flex items-center gap-1.5 mt-0.5 tabular">
+                  {ride.driver.totalTrips > 0 ? (
+                    <>
+                      <Star className="w-3.5 h-3.5 fill-current" aria-hidden="true" />
+                      {ride.driver.rating.toFixed(2)}
+                      <span className="text-muted">· {ride.driver.totalTrips} viajes · desde {ride.driver.memberSince}</span>
+                    </>
+                  ) : (
+                    <span className="text-muted">Conductor nuevo, sin reseñas todavía</span>
+                  )}
                 </p>
-                <PeekRating value={Math.round(ride.driver.rating)} size={18} readOnly activeColor="#9cb3ff" ariaLabel={`Valoración de ${ride.driver.name}: ${ride.driver.rating.toFixed(2)} de 5`} />
-                <div className="flex items-center gap-2 text-[11px] text-emerald-400 mt-1 font-medium">
-                  <ShieldCheck className="w-3.5 h-3.5" />
-                  <span>DUI y Teléfono salvadoreño verificados</span>
-                </div>
               </div>
             </div>
-
-            {/* Price Badge */}
-            <div className="text-right shrink-0">
-              <span className="text-2xl font-display font-black text-[#c4cfff] block">
-                ${ride.seatPrice.toFixed(2)}
-              </span>
-              <span className="text-[10px] text-slate-400 font-mono">por persona</span>
-            </div>
-
-          </div>
-        </div>
-
-        {/* Modal Scrollable Body */}
-        <div className="p-5 sm:p-6 space-y-6 max-h-[70vh] overflow-y-auto">
-          
-          {/* Route Stopovers (Ref 1 Style with Amber & Cyan Icons) */}
-          <div className="p-4 rounded-2xl bg-[#0c0f17] border border-white/10">
-            <span className="text-[10px] uppercase font-mono font-bold tracking-wider text-slate-400 block mb-3">
-              Recorrido Planificado
-            </span>
-
-            <div className="space-y-4 relative">
-              {/* Vertical connector line */}
-              <div className="absolute left-2.5 top-3 bottom-3 w-0.5 bg-gradient-to-b from-amber-400 via-cyan-400 to-emerald-400" />
-
-              {/* Origin */}
-              <div className="flex items-start gap-3 relative z-10">
-                <div className="w-5 h-5 rounded-full bg-amber-400/20 border-2 border-amber-400 flex items-center justify-center shrink-0 mt-0.5 bg-[#0c0f17]">
-                  <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
-                </div>
-                <div className="flex-1">
-                  <div className="flex items-baseline justify-between">
-                    <span className="text-xs sm:text-sm font-bold text-white">{ride.origin.name}</span>
-                    <span className="text-xs font-mono font-semibold text-amber-400">{ride.departureTime}</span>
-                  </div>
-                  <p className="text-[11px] text-slate-400">{ride.origin.address}</p>
-                </div>
-              </div>
-
-              {/* Waypoints */}
-              {ride.waypoints.map((wp) => (
-                <div key={wp.id} className="flex items-start gap-3 relative z-10">
-                  <div className="w-5 h-5 rounded-full bg-[#315cff]/20 border-2 border-[#315cff] flex items-center justify-center shrink-0 mt-0.5 bg-[#0c0f17]">
-                    <span className="w-1.5 h-1.5 rounded-full bg-[#315cff]" />
-                  </div>
-                  <div className="flex-1">
-                    <div className="flex items-baseline justify-between">
-                      <span className="text-xs sm:text-sm font-semibold text-slate-200">{wp.name}</span>
-                      <span className="text-xs font-mono text-[#c4cfff]">{wp.time}</span>
-                    </div>
-                    <p className="text-[11px] text-slate-400">{wp.address}</p>
-                  </div>
-                </div>
-              ))}
-
-              {/* Destination */}
-              <div className="flex items-start gap-3 relative z-10">
-                <div className="w-5 h-5 rounded-full bg-emerald-400/20 border-2 border-emerald-400 flex items-center justify-center shrink-0 mt-0.5 bg-[#0c0f17]">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                </div>
-                <div className="flex-1">
-                  <div className="flex items-baseline justify-between">
-                    <span className="text-xs sm:text-sm font-bold text-white">{ride.destination.name}</span>
-                    <span className="text-xs font-mono font-semibold text-emerald-400">{ride.arrivalTime}</span>
-                  </div>
-                  <p className="text-[11px] text-slate-400">{ride.destination.address}</p>
-                </div>
-              </div>
-
-            </div>
-          </div>
-
-          {/* Co-passengers for today (Ref 1 Style) */}
-          <div>
-            <span className="text-xs font-mono uppercase font-bold tracking-wider text-slate-400 block mb-2.5">
-              Compañeros de viaje confirmados ({ride.passengers.length}/{ride.totalSeats})
-            </span>
-
-            {ride.passengers.length > 0 ? (
-              <AvatarGroupHover className="flex flex-wrap items-center gap-3">
-                {ride.passengers.map((pas) => (
-                  <div key={pas.id} className="flex items-center gap-2 p-2 rounded-xl bg-[#0c0f17] border border-white/5">
-                    <img 
-                      src={pas.avatar} 
-                      alt={pas.name} 
-                      className="w-7 h-7 rounded-lg object-cover"
-                    />
-                    <div className="text-left pr-2">
-                      <span className="text-xs font-bold text-white block">{pas.name.split(' ')[0]}</span>
-                      <span className="text-[9px] text-slate-400 font-mono">Asiento {pas.seatNumber}</span>
-                    </div>
-                  </div>
-                ))}
-              </AvatarGroupHover>
-            ) : (
-              <p className="text-xs text-slate-500 italic p-2 bg-[#0c0f17] rounded-xl border border-white/5">
-                Aún no hay otros pasajeros. ¡Serás el primero en subir!
-              </p>
-            )}
-          </div>
-
-          {/* Passenger Reviews (Ref 1 Style) */}
-          {ride.driver.reviews && ride.driver.reviews.length > 0 && (
-            <div>
-              <span className="text-xs font-mono uppercase font-bold tracking-wider text-slate-400 block mb-2.5">
-                Reseñas de otros pasajeros
-              </span>
-              <div className="space-y-2">
-                {ride.driver.reviews.map((rev) => (
-                  <div key={rev.id} className="p-3 rounded-xl bg-[#0c0f17] border border-white/5 text-xs">
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="font-bold text-white">{rev.authorName}</span>
-                      <span className="text-[10px] text-slate-500 font-mono">{rev.date}</span>
-                    </div>
-                    <p className="text-slate-300 text-[11px] leading-relaxed">
-                      "{rev.comment}"
-                    </p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Seat Selector (Ref 2 Style) */}
-          <div className="p-3.5 rounded-2xl bg-[#0c0f17] border border-white/10 flex items-center justify-between">
-            <div>
-              <span className="text-xs font-bold text-white block">¿Cuántos asientos reservas?</span>
-              <span className="text-[11px] text-slate-400">Quedan {ride.availableSeats} disponibles</span>
-            </div>
-
-            <div className="flex items-center gap-1.5">
-              {[1, 2, 3].slice(0, ride.availableSeats).map((count) => (
-                <button
-                  key={count}
-                  type="button"
-                  onClick={() => setSelectedSeatCount(count)}
-                  className={`w-9 h-9 rounded-xl text-xs font-bold transition-all ${
-                    selectedSeatCount === count
-                      ? 'bg-[#315cff] text-slate-950 shadow-md'
-                      : 'bg-[#181d2a] text-slate-400 hover:text-white'
-                  }`}
-                >
-                  {count}
-                </button>
-              ))}
-            </div>
-          </div>
-
-        </div>
-
-        {/* Modal Footer with Pricing & Sticky CTA */}
-        <div className="p-4 sm:p-5 border-t border-white/10 bg-[#0c0f17] flex items-center justify-between gap-4">
-          <div>
-            <span className="text-[10px] text-slate-400 uppercase font-mono block">Aporte Total Gasolina</span>
-            <span className="text-2xl font-display font-black text-white">
-              ${totalPrice.toFixed(2)} USD
-            </span>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <button
-              onClick={onClose}
-              className="px-4 py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-white bg-[#131722] border border-white/10 transition-colors"
-            >
-              Cerrar
-            </button>
-
-            <button
-              disabled={isBooking}
-              onClick={handleConfirm}
-              className="min-h-[46px] px-6 py-2.5 rounded-xl text-xs sm:text-sm font-extrabold text-slate-950 bg-gradient-to-r from-[#315cff] to-[#00a89d] hover:from-[#4d77ff] hover:to-[#22c4b7] disabled:opacity-50 shadow-lg shadow-[#315cff]/25 flex items-center justify-center gap-2 transition-all transform active:scale-95"
-            >
-              {isBooking ? (
-                <>
-                  <CheckCircle2 className="w-4 h-4 animate-bounce" />
-                  <span>Confirmando...</span>
-                </>
+            <div className="flex flex-wrap gap-2">
+              {ride.driver.verifiedDUI ? (
+                <Badge tone="accent" icon={<ShieldCheck className="w-3.5 h-3.5" aria-hidden="true" />}>
+                  DUI verificado
+                </Badge>
               ) : (
-                <>
-                  <CheckCircle2 className="w-4 h-4" />
-                  <span>Reservar Asiento</span>
-                </>
+                <Badge tone="warning">DUI sin verificar</Badge>
               )}
-            </button>
-          </div>
+              {ride.driver.verifiedPhone ? (
+                <Badge tone="accent" icon={<Phone className="w-3.5 h-3.5" aria-hidden="true" />}>
+                  Teléfono +503
+                </Badge>
+              ) : null}
+            </div>
+            {ride.driver.bio ? <p className="t-body text-muted">{ride.driver.bio}</p> : null}
+            <div className="border-t border-line pt-4 flex items-start gap-3">
+              <Car className="w-5 h-5 text-muted shrink-0 mt-0.5" aria-hidden="true" />
+              <div>
+                <p className="text-[15px]">
+                  {ride.vehicle.make} {ride.vehicle.model} · {ride.vehicle.color}
+                </p>
+                <p className="t-small text-muted">
+                  Placa <span className="text-fg tabular">{ride.vehicle.plate}</span>
+                  {ride.vehicle.year ? ` · ${ride.vehicle.year}` : ''}
+                </p>
+              </div>
+            </div>
+            {ride.amenities.length ? (
+              <ul className="flex flex-wrap gap-2" aria-label="Comodidades">
+                {ride.amenities.map((a) => (
+                  <li key={a}>
+                    <Badge>{a}</Badge>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+          </section>
+
+          {ride.driver.reviews?.length ? (
+            <section aria-label="Reseñas" className="flex flex-col gap-3">
+              <h3 className="t-h6">Reseñas recientes</h3>
+              {ride.driver.reviews.slice(0, 2).map((r) => (
+                <blockquote key={r.id} className="surface-inset p-4">
+                  <p className="t-body">“{r.comment}”</p>
+                  <footer className="t-small text-muted mt-2">
+                    {r.authorName} · {r.date}
+                  </footer>
+                </blockquote>
+              ))}
+            </section>
+          ) : null}
         </div>
 
+        <form id="booking-form" onSubmit={submit} noValidate className="flex flex-col gap-6">
+          {full ? (
+            <div role="status" className="surface-inset p-4 flex gap-3 text-[15px]">
+              <Info className="w-5 h-5 text-warning shrink-0" aria-hidden="true" />
+              Esta salida ya no tiene asientos libres. Busca otra salida en el mismo corredor.
+            </div>
+          ) : null}
+
+          <fieldset disabled={full} className="flex flex-col gap-3">
+            <legend className="text-[14px] mb-3">¿Dónde subes?</legend>
+            {pickupOptions.map((o) => {
+              const on = pickup === o.value;
+              return (
+                <label
+                  key={o.value}
+                  className={cx(
+                    'flex items-center gap-3 p-4 rounded-[12px] border cursor-pointer transition-colors',
+                    on ? 'border-accent bg-accent-soft' : 'border-line-strong hover:border-white/20'
+                  )}
+                >
+                  <input
+                    type="radio"
+                    name="pickup"
+                    value={o.value}
+                    checked={on}
+                    onChange={() => setPickup(o.value)}
+                    className="w-4 h-4 accent-[#21d2ed]"
+                  />
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-[15px] truncate">{o.label}</span>
+                    <span className="block t-small text-muted">{o.city}</span>
+                  </span>
+                  <span className="t-small tabular text-muted shrink-0">{o.time}</span>
+                </label>
+              );
+            })}
+          </fieldset>
+
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <p className="text-[14px]">Asientos</p>
+              <p className="t-small text-muted">
+                {full ? 'Completo' : `${ride.availableSeats} de ${ride.totalSeats} libres`}
+              </p>
+            </div>
+            <Stepper
+              label="Asientos a reservar"
+              value={seats}
+              min={1}
+              max={maxSeats}
+              onChange={setSeats}
+            />
+          </div>
+
+          <Field label="Nombre de quien viaja" error={nameError} hint="El conductor lo verá en su lista de pasajeros.">
+            {(a) => (
+              <input
+                {...a}
+                value={name}
+                disabled={full}
+                onChange={(e) => {
+                  setName(e.target.value);
+                  if (nameError) setNameError(null);
+                }}
+                autoComplete="name"
+                className={inputClass(Boolean(nameError))}
+              />
+            )}
+          </Field>
+
+          {ride.notes ? (
+            <div className="surface-inset p-4">
+              <p className="t-small text-muted">Nota del conductor</p>
+              <p className="t-body mt-1">{ride.notes}</p>
+            </div>
+          ) : null}
+
+          <p className="t-small text-subtle">
+            Al reservar recibes un pase con PIN. El aporte se acuerda con el conductor: esta versión de NAR no procesa pagos.
+          </p>
+        </form>
       </div>
-    </div>
+    </Modal>
   );
 };

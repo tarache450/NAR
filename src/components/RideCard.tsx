@@ -1,220 +1,124 @@
 import React from 'react';
-import { Ride } from '../types';
-import { 
-  Users, 
-  ShieldCheck, 
-  Clock, 
-  MapPin, 
-  Zap, 
-  ArrowRight, 
-  Star,
-  CheckCircle2,
-  Calendar
-} from 'lucide-react';
+import { ShieldCheck, Star, Repeat } from 'lucide-react';
+import type { Ride } from '../types';
+import { Avatar, Badge, cx } from './ui/primitives';
+import { clock24, usd } from '../lib/rides';
+import GlareHover from './bits/GlareHover';
 
 interface RideCardProps {
   ride: Ride;
   onSelect: (ride: Ride) => void;
-  onOpenLiveTelemetry?: (ride: Ride) => void;
 }
 
-export const RideCard: React.FC<RideCardProps> = ({ 
-  ride, 
-  onSelect, 
-  onOpenLiveTelemetry 
-}) => {
-  const isLive = ride.status === 'in_progress';
-  
+export const RouteTimes: React.FC<{ ride: Ride; className?: string }> = ({ ride, className }) => (
+  <div className={cx('grid grid-cols-[56px_16px_1fr] gap-x-3', className)}>
+    <span className="t-h6 tabular leading-none pt-0.5">{clock24(ride.departureTime)}</span>
+    <span className="relative flex justify-center row-span-3" aria-hidden="true">
+      <span className="mt-1.5 w-2.5 h-2.5 rounded-full border-2 border-accent bg-bg z-10" />
+      <span className="absolute top-4 bottom-4 w-px bg-white/20" />
+      <span className="absolute bottom-1 w-2.5 h-2.5 rounded-full bg-white" />
+    </span>
+    <div className="min-w-0 pb-1">
+      <p className="text-[16px] leading-tight truncate">{ride.origin.city}</p>
+      <p className="t-small text-muted truncate">{ride.origin.name}</p>
+    </div>
+
+    <span className="text-[12px] text-subtle tabular py-2">{ride.estimatedDuration}</span>
+    <span className="text-[12px] text-subtle py-2 truncate">
+      {ride.waypoints.length > 0 ? `Pasa por ${ride.waypoints.map((w) => w.city).join(', ')}` : 'Directo'}
+    </span>
+
+    <span className="t-h6 tabular leading-none text-muted pt-0.5">{clock24(ride.arrivalTime)}</span>
+    <div className="min-w-0">
+      <p className="text-[16px] leading-tight truncate">{ride.destination.city}</p>
+      <p className="t-small text-muted truncate">{ride.destination.name}</p>
+    </div>
+  </div>
+);
+
+export const RideCard: React.FC<RideCardProps> = ({ ride, onSelect }) => {
+  const full = ride.availableSeats <= 0;
+
   return (
-    <article 
-      onClick={() => onSelect(ride)}
-      className="group relative bg-[#131722] hover:bg-[#181d2b] border border-white/10 hover:border-[#315cff]/40 rounded-3xl p-5 sm:p-6 transition-all duration-300 flex flex-col justify-between shadow-xl shadow-black/40 cursor-pointer"
+    <GlareHover
+      width="100%"
+      height="100%"
+      borderRadius="16px"
+      glareColor="#21d2ed"
+      glareOpacity={0.12}
+      glareSize={220}
+      transitionDuration={700}
+      className="block"
     >
-      <div>
-        
-        {/* NIVEL 1: Ruta + Horario + Precio (Visual Scanning en 2 segundos) */}
-        <div className="flex items-start justify-between gap-3 mb-4 pb-4 border-b border-white/10">
-          
-          {/* Timeline & Cities */}
-          <div className="flex items-center gap-3 flex-1">
-            
-            {/* Origin & Departure */}
-            <div>
-              <span className="text-sm sm:text-lg font-display font-black text-white block whitespace-nowrap">
-                {ride.departureTime}
-              </span>
-              <span className="text-xs font-semibold text-slate-300 block truncate max-w-[120px] sm:max-w-[140px]">
-                {ride.origin.city}
-              </span>
-              <span className="text-[10px] text-slate-500 truncate block max-w-[120px]">
-                {ride.origin.name.split(' ')[0]}
-              </span>
-            </div>
-
-            {/* Dotted Route Vector Indicator */}
-            <div className="flex flex-col items-center px-1">
-              <span className="text-[10px] font-mono text-[#9cb3ff] font-bold mb-0.5">
-                {ride.estimatedDuration}
-              </span>
-              <div className="flex items-center gap-1">
-                <div className="w-2 h-2 rounded-full bg-amber-400" />
-                <div className="w-8 sm:w-12 h-0.5 border-t border-dashed border-[#315cff]/60" />
-                <div className="w-2 h-2 rounded-xs bg-[#315cff]" />
-              </div>
-              {ride.waypoints.length > 0 && (
-                <span className="text-[9px] text-slate-400 mt-0.5">
-                  1 parada
-                </span>
-              )}
-            </div>
-
-            {/* Destination & Arrival */}
-            <div>
-              <span className="text-sm sm:text-lg font-display font-black text-white block whitespace-nowrap">
-                {ride.arrivalTime}
-              </span>
-              <span className="text-xs font-semibold text-slate-300 block truncate max-w-[120px] sm:max-w-[140px]">
-                {ride.destination.city}
-              </span>
-              <span className="text-[10px] text-slate-500 truncate block max-w-[120px]">
-                {ride.destination.name.split(' ')[0]}
-              </span>
-            </div>
-
-          </div>
-
-          {/* Pricing Highlight in USD ($) */}
-          <div className="text-right shrink-0">
-            <span className="text-xl sm:text-2xl font-display font-black text-[#c4cfff] block">
-              ${ride.seatPrice.toFixed(2)}
-            </span>
-            <span className="text-[10px] text-slate-400 block font-mono">
-              / asiento
-            </span>
-          </div>
-
-        </div>
-
-        {/* Intermediate Corridor Stops (Central to NAR's Waypoint Matching) */}
-        {ride.waypoints && ride.waypoints.length > 0 && (
-          <div className="mb-3.5 px-3 py-1.5 rounded-xl bg-[#0c0f17] border border-white/5 flex items-center justify-between text-[11px]">
-            <div className="flex items-center gap-1.5 text-slate-300 truncate">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#315cff] shrink-0" />
-              <span className="text-slate-400 font-mono text-[10px]">Puntos en ruta:</span>
-              <span className="font-medium text-white truncate">
-                {ride.waypoints.map(w => `${w.city} (${w.name.split(' ')[0]})`).join(' · ')}
-              </span>
-            </div>
-            <span className="text-[10px] text-emerald-400 font-mono shrink-0 ml-2 font-semibold">
-              Admite paradas
-            </span>
-          </div>
-        )}
-
-        {/* NIVEL 2: Persona + Vehículo + Confianza */}
-        <div className="flex items-center justify-between gap-3 mb-4">
-          
-          {/* Driver Credentials */}
-          <div className="flex items-center gap-3">
-            <div className="relative shrink-0">
-              <img 
-                src={ride.driver.avatar} 
-                alt={ride.driver.name} 
-                className="w-10 h-10 rounded-2xl object-cover border border-white/20 group-hover:border-[#315cff] transition-colors"
-              />
-              {ride.driver.verifiedDUI && (
-                <div 
-                  className="absolute -bottom-1 -right-1 w-4 h-4 bg-emerald-500 text-white rounded-full flex items-center justify-center text-[9px] font-bold border-2 border-[#131722]"
-                  title="DUI & Teléfono Verificados"
-                >
-                  ✓
-                </div>
-              )}
-            </div>
-
-            <div>
-              <div className="flex items-center gap-1.5">
-                <span className="text-xs sm:text-sm font-bold text-white group-hover:text-[#c4cfff] transition-colors">
-                  {ride.driver.name}
-                </span>
-                <span className="text-[11px] font-semibold text-yellow-400 flex items-center">
-                  ★ {ride.driver.rating.toFixed(1)}
-                </span>
-              </div>
-              <span className="text-[11px] text-slate-400 block">
-                {ride.vehicle.make} {ride.vehicle.model.split(' ')[0]} · {ride.vehicle.color}
-              </span>
-            </div>
-          </div>
-
-          {/* Seats Left Pill */}
-          <div className="text-right">
-            <span className={`text-[10px] sm:text-[11px] whitespace-nowrap font-mono font-bold px-2.5 py-1 rounded-xl border ${
-              ride.availableSeats === 1 
-                ? 'bg-amber-500/10 text-amber-400 border-amber-500/30' 
-                : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
-            }`}>
-              {ride.availableSeats} {ride.availableSeats === 1 ? 'plaza restante' : 'plazas libres'}
-            </span>
-            {isLive && (
-              <span className="flex items-center justify-end gap-1 text-[10px] font-mono text-[#9cb3ff] mt-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#315cff] animate-ping" />
-                En ruta ahora
-              </span>
+    <article
+      className={cx(
+        'card relative flex flex-col h-full transition-colors duration-200 hover:border-white/15 hover:bg-[#131316] group',
+        full && 'opacity-70'
+      )}
+    >
+      <div className="p-5 sm:p-6 flex flex-col gap-5">
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex flex-wrap items-center gap-2">
+            {ride.status === 'in_progress' ? (
+              <Badge tone="accent">
+                <span className="w-1.5 h-1.5 rounded-full bg-accent" aria-hidden="true" />
+                En ruta
+              </Badge>
+            ) : (
+              <Badge>{ride.date}</Badge>
             )}
+            {ride.isRecurring && ride.recurringDays ? (
+              <Badge icon={<Repeat className="w-3 h-3" aria-hidden="true" />}>{ride.recurringDays}</Badge>
+            ) : null}
           </div>
-
+          <div className="text-right shrink-0">
+            <p className="t-h4 tabular leading-none">{usd(ride.seatPrice)}</p>
+            <p className="text-[12px] text-subtle mt-1">por asiento</p>
+          </div>
         </div>
 
-        {/* NIVEL 3: Detalles Secundarios (Chips limpios) */}
-        <div className="flex items-center gap-1.5 flex-wrap mb-5">
-          {ride.amenities.slice(0, 3).map((amenity, idx) => (
-            <span 
-              key={idx}
-              className="text-[10px] text-slate-300 bg-[#0c0f17] border border-white/5 px-2.5 py-0.5 rounded-lg font-medium"
-            >
-              {amenity}
-            </span>
-          ))}
-          {ride.isRecurring && (
-            <span className="text-[10px] text-[#c4cfff] bg-[#315cff]/10 border border-cyan-500/30 px-2 py-0.5 rounded-lg font-mono">
-              Recurrente ({ride.recurringDays})
-            </span>
-          )}
+        <RouteTimes ride={ride} />
+      </div>
+
+      <div className="mt-auto border-t border-line px-5 sm:px-6 py-4 flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3 min-w-0">
+          <Avatar src={ride.driver.avatar} name={ride.driver.name} size={36} />
+          <div className="min-w-0">
+            <p className="text-[15px] leading-tight truncate flex items-center gap-1.5">
+              {ride.driver.name}
+              {ride.driver.verifiedDUI ? (
+                <ShieldCheck className="w-4 h-4 text-accent shrink-0" aria-label="DUI verificado" />
+              ) : null}
+            </p>
+            <p className="t-small text-muted flex items-center gap-1 tabular">
+              {ride.driver.totalTrips > 0 ? (
+                <>
+                  <Star className="w-3.5 h-3.5 fill-current text-fg" aria-hidden="true" />
+                  {ride.driver.rating.toFixed(2)}
+                </>
+              ) : (
+                <span>Nuevo</span>
+              )}
+              <span className="text-subtle truncate">· {ride.vehicle.make} {ride.vehicle.model}</span>
+            </p>
+          </div>
         </div>
-
+        <p className={cx('t-small shrink-0 tabular', full ? 'text-danger' : 'text-fg')}>
+          {full ? 'Completo' : `${ride.availableSeats} ${ride.availableSeats === 1 ? 'libre' : 'libres'}`}
+        </p>
       </div>
 
-      {/* NIVEL 4: Acción Principal Clara */}
-      <div className="pt-3 border-t border-white/10 flex items-center gap-2">
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            onSelect(ride);
-          }}
-          className="flex-1 min-h-[42px] py-2 px-4 rounded-xl text-xs sm:text-sm font-bold text-slate-950 bg-gradient-to-r from-[#315cff] to-[#00a89d] hover:from-[#4d77ff] hover:to-[#22c4b7] shadow-md shadow-[#315cff]/15 flex items-center justify-center gap-2 transition-all transform active:scale-98"
-        >
-          <span>Ver Ruta & Reservar Asiento</span>
-          <ArrowRight className="w-4 h-4" />
-        </button>
-
-        {isLive && onOpenLiveTelemetry && (
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              onOpenLiveTelemetry(ride);
-            }}
-            className="min-h-[42px] px-3 py-2 rounded-xl text-xs font-semibold text-[#c4cfff] bg-white/5 hover:bg-white/10 border border-cyan-500/30 flex items-center gap-1.5"
-            title="Ver mapa en vivo"
-          >
-            <Zap className="w-3.5 h-3.5 text-[#9cb3ff]" />
-            <span className="hidden sm:inline">Mapa</span>
-          </button>
-        )}
-      </div>
+      {/* Área clicable principal (patrón "stretched link") */}
+      <button
+        type="button"
+        onClick={() => onSelect(ride)}
+        className="absolute inset-0 rounded-[16px] focus-visible:outline-2"
+        aria-label={`Ver viaje ${ride.origin.city} a ${ride.destination.city}, salida ${ride.departureTime}, ${usd(
+          ride.seatPrice
+        )} por asiento${full ? ', completo' : ''}`}
+      />
 
     </article>
+    </GlareHover>
   );
 };

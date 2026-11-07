@@ -1,262 +1,290 @@
-import React, { useState } from 'react';
-import { Ride } from '../types';
+import React, { useMemo, useState } from 'react';
+import { Compass, RotateCcw, SlidersHorizontal } from 'lucide-react';
+import type { Ride } from '../types';
 import { RideCard } from './RideCard';
-import { 
-  Search, 
-  MapPin, 
-  Clock, 
-  Filter, 
-  SlidersHorizontal, 
-  ArrowRightLeft,
-  Star,
-  Users,
-  Car
-} from 'lucide-react';
+import { SearchPanel, type SearchQuery } from './SearchPanel';
+import { Button, Disclosure, EmptyState, Eyebrow, Segmented, cx } from './ui/primitives';
+import { dayLabel, matchesPlace, minutesOfDay, runsOn, usd } from '../lib/rides';
+import ElasticSlider from './bits/ElasticSlider';
+import GlideSelect from './bits/GlideSelect';
+import SquishSwitch from './bits/SquishSwitch';
+import TextType from './bits/TextType';
+import DotGrid from './bits/DotGrid';
 
 interface SearchViewProps {
   rides: Ride[];
+  places: string[];
+  query: SearchQuery;
+  onQueryChange: (q: SearchQuery) => void;
   onSelectRide: (ride: Ride) => void;
-  onOpenLiveTelemetry: (ride: Ride) => void;
-  initialOrigin?: string;
-  initialDestination?: string;
+  onOpenPublish: () => void;
 }
 
-export const SearchView: React.FC<SearchViewProps> = ({
-  rides,
-  onSelectRide,
-  onOpenLiveTelemetry,
-  initialOrigin = '',
-  initialDestination = '',
-}) => {
-  const [origin, setOrigin] = useState(initialOrigin);
-  const [destination, setDestination] = useState(initialDestination);
-  const [timeFilter, setTimeFilter] = useState<'all' | 'morning' | 'afternoon'>('all');
-  const [maxPrice, setMaxPrice] = useState<number>(6);
-  const [minRating, setMinRating] = useState<number>(4.5);
+type Slot = 'all' | 'am' | 'pm';
+type Sort = 'time' | 'price' | 'rating';
 
-  const handleSwap = () => {
-    const temp = origin;
-    setOrigin(destination);
-    setDestination(temp);
+export const SearchView: React.FC<SearchViewProps> = ({ rides, places, query, onQueryChange, onSelectRide, onOpenPublish }) => {
+  const priceCeil = useMemo(() => Math.ceil(Math.max(1, ...rides.map((r) => r.seatPrice))), [rides]);
+  const [draft, setDraft] = useState<SearchQuery>(query);
+  const [slot, setSlot] = useState<Slot>('all');
+  const [maxPriceSel, setMaxPrice] = useState<number | null>(null);
+  const maxPrice = maxPriceSel ?? priceCeil;
+  const [minRating, setMinRating] = useState<'0' | '4.5' | '4.9'>('0');
+  const [verifiedOnly, setVerifiedOnly] = useState(false);
+  const [sort, setSort] = useState<Sort>('time');
+
+  // Mantener el formulario sincronizado si la búsqueda llega desde otra vista
+  const [lastQuery, setLastQuery] = useState(query);
+  if (lastQuery !== query) {
+    setLastQuery(query);
+    setDraft(query);
+  }
+
+  const effectiveMax = maxPriceSel ?? Infinity;
+
+  const results = rides
+    .filter((r) => matchesPlace(r, query.origin, 'origin'))
+    .filter((r) => matchesPlace(r, query.destination, 'destination'))
+    .filter((r) => runsOn(r, query.day))
+    .filter((r) => r.availableSeats >= query.seats)
+    .filter((r) => {
+      const h = minutesOfDay(r.departureTime) / 60;
+      return slot === 'all' ? true : slot === 'am' ? h < 12 : h >= 12;
+    })
+    .filter((r) => r.seatPrice <= effectiveMax)
+    .filter((r) => r.driver.rating >= Number(minRating))
+    .filter((r) => (verifiedOnly ? r.driver.verifiedDUI : true))
+    .sort((a, b) =>
+      sort === 'price'
+        ? a.seatPrice - b.seatPrice
+        : sort === 'rating'
+        ? b.driver.rating - a.driver.rating
+        : minutesOfDay(a.departureTime) - minutesOfDay(b.departureTime)
+    );
+
+  const filtersActive = slot !== 'all' || maxPriceSel !== null || minRating !== '0' || verifiedOnly;
+
+  const resetAll = () => {
+    setSlot('all');
+    setMaxPrice(null);
+    setMinRating('0');
+    setVerifiedOnly(false);
+    setSort('time');
+    const cleared = { origin: '', destination: '', day: 'any' as const, seats: 1 };
+    setDraft(cleared);
+    onQueryChange(cleared);
   };
 
-  const filteredRides = rides.filter(ride => {
-    const matchOrigin = !origin.trim() || 
-      ride.origin.name.toLowerCase().includes(origin.toLowerCase()) ||
-      ride.origin.city.toLowerCase().includes(origin.toLowerCase());
+  const filters = (
+    <div className="flex flex-col gap-7">
+      <fieldset className="flex flex-col gap-3">
+        <legend className="text-[14px] mb-3">Horario de salida</legend>
+        <Segmented<Slot>
+          label="Horario de salida"
+          value={slot}
+          onChange={setSlot}
+          options={[
+            { value: 'all', label: 'Todos' },
+            { value: 'am', label: 'Mañana' },
+            { value: 'pm', label: 'Tarde' },
+          ]}
+        />
+      </fieldset>
 
-    const matchDest = !destination.trim() ||
-      ride.destination.name.toLowerCase().includes(destination.toLowerCase()) ||
-      ride.destination.city.toLowerCase().includes(destination.toLowerCase()) ||
-      ride.waypoints.some(wp => wp.name.toLowerCase().includes(destination.toLowerCase()) || wp.city.toLowerCase().includes(destination.toLowerCase()));
+      <div className="flex flex-col gap-4">
+        <p className="text-[14px] flex justify-between">
+          <span>Aporte máximo</span>
+          <span className="text-muted tabular">{maxPriceSel === null ? 'Sin límite' : usd(maxPrice)}</span>
+        </p>
+        <ElasticSlider
+          value={maxPrice}
+          startingValue={1}
+          maxValue={priceCeil}
+          isStepped
+          stepSize={0.5}
+          onChange={(v) => setMaxPrice(v >= priceCeil ? null : v)}
+          valuePosition="none"
+          thickness={6}
+          activeThickness={10}
+          trackColor="rgba(255,255,255,0.1)"
+          rangeColor="#21d2ed"
+          thumbColor="#ffffff"
+          ariaLabel="Aporte máximo por asiento en dólares"
+          formatValue={(v) => usd(v)}
+          leftIcon={<span className="text-[12px] text-subtle tabular">$1</span>}
+          rightIcon={<span className="text-[12px] text-subtle tabular">${priceCeil}</span>}
+        />
+      </div>
 
-    const matchPrice = ride.seatPrice <= maxPrice;
-    const matchRating = ride.driver.rating >= minRating;
+      <fieldset>
+        <legend className="text-[14px] mb-3">Calificación del conductor</legend>
+        <Segmented<'0' | '4.5' | '4.9'>
+          label="Calificación mínima"
+          value={minRating}
+          onChange={setMinRating}
+          options={[
+            { value: '0', label: 'Cualquiera' },
+            { value: '4.5', label: '4.5+' },
+            { value: '4.9', label: '4.9+' },
+          ]}
+        />
+      </fieldset>
 
-    // Time filter
-    let matchTime = true;
-    const hour = parseInt(ride.departureTime.split(':')[0], 10);
-    const isPM = ride.departureTime.includes('PM');
-    const hour24 = isPM && hour !== 12 ? hour + 12 : (!isPM && hour === 12 ? 0 : hour);
+      <div className="flex items-center justify-between gap-3 text-[14px]">
+        <span id="f-verified">Solo conductores con DUI verificado</span>
+        <SquishSwitch
+          checked={verifiedOnly}
+          onChange={setVerifiedOnly}
+          ariaLabel="Solo conductores con DUI verificado"
+          trackColor="rgba(255,255,255,0.12)"
+          trackOnColor="#21d2ed"
+          thumbColor="#ffffff"
+          thumbOnColor="#09090b"
+          width={46}
+          height={26}
+        />
+      </div>
 
-    if (timeFilter === 'morning') {
-      matchTime = hour24 >= 5 && hour24 <= 11;
-    } else if (timeFilter === 'afternoon') {
-      matchTime = hour24 >= 12 && hour24 <= 21;
-    }
+      {filtersActive ? (
+        <Button
+          variant="ghost"
+          size="sm"
+          className="self-start -ml-3"
+          onClick={() => {
+            setSlot('all');
+            setMaxPrice(null);
+            setMinRating('0');
+            setVerifiedOnly(false);
+          }}
+        >
+          <RotateCcw className="w-4 h-4" aria-hidden="true" />
+          Quitar filtros
+        </Button>
+      ) : null}
+    </div>
+  );
 
-    return matchOrigin && matchDest && matchPrice && matchRating && matchTime;
-  });
+  const route =
+    query.origin || query.destination
+      ? `${query.origin || 'Cualquier origen'} → ${query.destination || 'cualquier destino'}`
+      : 'Todos los corredores';
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-6 sm:py-8 space-y-6">
-      
-      {/* Header */}
-      <div>
-        <span className="text-xs font-mono font-bold uppercase tracking-wider text-[#9cb3ff] block mb-1">
-          BUSCADOR DE VIAJES COMPARTIDOS NAR
-        </span>
-        <h1 className="text-2xl sm:text-3xl font-display font-extrabold text-white tracking-tight">
-          Buscar ruta en El Salvador
+    <section aria-labelledby="buscar-title" className="relative pt-[96px] md:pt-[124px] pb-24">
+      <div className="absolute inset-x-0 top-0 h-[360px] pointer-events-none [mask-image:linear-gradient(to_bottom,#000_30%,transparent)]" aria-hidden="true">
+        <DotGrid dotSize={3} gap={22} baseColor="#1d2a3a" activeColor="#21d2ed" proximity={130} opacity={0.9} />
+      </div>
+      <div className="container-nar relative">
+        <Eyebrow>Buscar viaje</Eyebrow>
+        <h1 id="buscar-title" className="t-h2 mt-3">
+          ¿A dónde vas?
         </h1>
-        <p className="text-xs sm:text-sm text-slate-400 mt-1">
-          Filtra por horario, conductor y precio para encontrar tu trayecto ideal
+        <p className="t-body text-muted mt-3 min-h-[24px]" aria-hidden="true">
+          <span className="text-subtle">Prueba con </span>
+          <TextType
+            as="span"
+            text={places.length ? places.slice(0, 6).map((p) => `“${p}”`) : ['tu ciudad']}
+            typingSpeed={55}
+            deletingSpeed={30}
+            pauseDuration={1600}
+            cursorCharacter="|"
+            cursorColor="#21d2ed"
+            className="text-fg"
+            startOnVisible
+          />
         </p>
-      </div>
 
-      {/* Search Filter Controls Card */}
-      <div className="bg-[#131722] border border-white/10 rounded-3xl p-5 sm:p-6 shadow-2xl space-y-4">
-        
-        {/* Origin and Destination with Swap */}
-        <div className="grid grid-cols-1 md:grid-cols-11 gap-3 items-center">
-          
-          <div className="md:col-span-5 relative">
-            <label className="text-[10px] font-mono uppercase text-amber-400 font-bold block mb-1">
-              Origen
-            </label>
-            <input
-              type="text"
-              value={origin}
-              onChange={(e) => setOrigin(e.target.value)}
-              placeholder="Ej. San Salvador, Multiplaza, Santa Tecla..."
-              className="w-full min-h-[46px] px-3.5 py-2.5 text-sm bg-[#0c1017] border border-white/10 rounded-2xl text-white placeholder-slate-500 focus:outline-none focus:border-[#315cff]"
-            />
-          </div>
+        <SearchPanel
+          className="mt-8"
+          value={draft}
+          onChange={setDraft}
+          onSubmit={onQueryChange}
+          places={places}
+          submitLabel="Actualizar"
+        />
 
-          <div className="md:col-span-1 flex justify-center">
-            <button
-              type="button"
-              onClick={handleSwap}
-              className="w-10 h-10 rounded-xl bg-[#0c1017] hover:bg-white/10 border border-white/10 text-[#9cb3ff] flex items-center justify-center transition-colors"
-              title="Invertir ciudades"
-            >
-              <ArrowRightLeft className="w-4 h-4" />
-            </button>
-          </div>
+        <div className="mt-10 grid gap-8 lg:grid-cols-[280px_1fr]">
+          <aside aria-label="Filtros" className="hidden lg:block">
+            <div className="card p-6 sticky top-[96px]">
+              <h2 className="t-h6 mb-6 flex items-center gap-2">
+                <SlidersHorizontal className="w-4 h-4 text-muted" aria-hidden="true" /> Filtros
+              </h2>
+              {filters}
+            </div>
+          </aside>
 
-          <div className="md:col-span-5 relative">
-            <label className="text-[10px] font-mono uppercase text-[#9cb3ff] font-bold block mb-1">
-              Destino
-            </label>
-            <input
-              type="text"
-              value={destination}
-              onChange={(e) => setDestination(e.target.value)}
-              placeholder="Ej. Santa Ana, El Tunco, San Miguel, Sonsonate..."
-              className="w-full min-h-[46px] px-3.5 py-2.5 text-sm bg-[#0c1017] border border-white/10 rounded-2xl text-white placeholder-slate-500 focus:outline-none focus:border-[#315cff]"
-            />
-          </div>
-
-        </div>
-
-        {/* Quick Filter Segments */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-3 border-t border-white/10">
-          
-          {/* Time segment */}
-          <div>
-            <label className="text-[11px] font-mono text-slate-400 block mb-1.5">
-              Franja Horaria
-            </label>
-            <div className="grid grid-cols-3 gap-1 bg-[#0c1017] p-1 rounded-xl border border-white/5">
-              <button
-                type="button"
-                onClick={() => setTimeFilter('all')}
-                className={`py-1.5 text-xs font-semibold rounded-lg transition-all ${
-                  timeFilter === 'all' ? 'bg-[#315cff] text-slate-950 font-bold' : 'text-slate-400'
-                }`}
+          <div className="min-w-0">
+            <div className="lg:hidden mb-6">
+              <Disclosure
+                summary={
+                  <span className="flex items-center gap-2">
+                    <SlidersHorizontal className="w-4 h-4 text-muted" aria-hidden="true" />
+                    Filtros{filtersActive ? ' (activos)' : ''}
+                  </span>
+                }
               >
-                Cualquiera
-              </button>
-              <button
-                type="button"
-                onClick={() => setTimeFilter('morning')}
-                className={`py-1.5 text-xs font-semibold rounded-lg transition-all ${
-                  timeFilter === 'morning' ? 'bg-[#315cff] text-slate-950 font-bold' : 'text-slate-400'
-                }`}
-              >
-                Mañana
-              </button>
-              <button
-                type="button"
-                onClick={() => setTimeFilter('afternoon')}
-                className={`py-1.5 text-xs font-semibold rounded-lg transition-all ${
-                  timeFilter === 'afternoon' ? 'bg-[#315cff] text-slate-950 font-bold' : 'text-slate-400'
-                }`}
-              >
-                Tarde
-              </button>
+                <div className="card p-5">{filters}</div>
+              </Disclosure>
             </div>
-          </div>
 
-          {/* Max Price */}
-          <div>
-            <div className="flex items-center justify-between text-[11px] font-mono text-slate-400 mb-1.5">
-              <span>Aporte Máximo:</span>
-              <span className="text-[#c4cfff] font-bold font-display">${maxPrice}.00 USD</span>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+              <div aria-live="polite">
+                <p className="t-h5 tabular">
+                  {results.length} {results.length === 1 ? 'viaje' : 'viajes'}
+                </p>
+                <p className="t-small text-muted mt-1">
+                  {route} · {dayLabel(query.day)} · {query.seats} {query.seats === 1 ? 'pasajero' : 'pasajeros'}
+                </p>
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="t-small text-muted shrink-0">Ordenar por</span>
+                <GlideSelect
+                  value={sort}
+                  onChange={(v) => setSort(v as Sort)}
+                  options={[
+                    { value: 'time', label: 'Hora de salida' },
+                    { value: 'price', label: 'Menor aporte' },
+                    { value: 'rating', label: 'Mejor calificación' },
+                  ]}
+                  accentColor="#21d2ed"
+                  surfaceColor="#141416"
+                  highlightColor="rgba(33,210,237,0.12)"
+                  textColor="#ffffff"
+                  size="md"
+                  radius={10}
+                  align="right"
+                  ariaLabel="Ordenar resultados"
+                />
+              </div>
             </div>
-            <input 
-              type="range"
-              min="2"
-              max="8"
-              step="0.5"
-              value={maxPrice}
-              onChange={(e) => setMaxPrice(Number(e.target.value))}
-              className="w-full accent-cyan-400 bg-[#0c1017] rounded-lg cursor-pointer h-2"
-            />
-          </div>
 
-          {/* Min Rating */}
-          <div>
-            <div className="flex items-center justify-between text-[11px] font-mono text-slate-400 mb-1.5">
-              <span>Reputación Mínima:</span>
-              <span className="text-yellow-400 font-bold">★ {minRating}</span>
-            </div>
-            <div className="grid grid-cols-3 gap-1 bg-[#0c1017] p-1 rounded-xl border border-white/5">
-              {[4.5, 4.8, 4.9].map((rat) => (
-                <button
-                  key={rat}
-                  type="button"
-                  onClick={() => setMinRating(rat)}
-                  className={`py-1.5 text-xs font-semibold rounded-lg transition-all ${
-                    minRating === rat ? 'bg-[#315cff] text-slate-950 font-bold' : 'text-slate-400'
-                  }`}
-                >
-                  ★ {rat}+
-                </button>
-              ))}
-            </div>
+            {results.length ? (
+              <ul className={cx('grid gap-4 xl:grid-cols-2')}>
+                {results.map((r) => (
+                  <li key={r.id}>
+                    <RideCard ride={r} onSelect={onSelectRide} />
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <EmptyState
+                icon={<Compass className="w-5 h-5" />}
+                title="No hay viajes con estos criterios"
+                description="Prueba con otro día, menos pasajeros o quita algún filtro. Si haces este trayecto en carro, puedes publicarlo."
+                actions={
+                  <>
+                    <Button variant="outline" onClick={resetAll}>
+                      <RotateCcw className="w-4 h-4" aria-hidden="true" />
+                      Ver todos los viajes
+                    </Button>
+                    <Button onClick={onOpenPublish}>Publicar viaje</Button>
+                  </>
+                }
+              />
+            )}
           </div>
-
         </div>
-
       </div>
-
-      {/* Results Header */}
-      <div className="flex items-center justify-between pt-2">
-        <span className="text-xs font-mono text-slate-400">
-          Se encontraron <strong className="text-white">{filteredRides.length}</strong> trayectos disponibles
-        </span>
-
-        {(origin || destination || timeFilter !== 'all' || maxPrice < 6) && (
-          <button
-            onClick={() => {
-              setOrigin('');
-              setDestination('');
-              setTimeFilter('all');
-              setMaxPrice(6);
-              setMinRating(4.5);
-            }}
-            className="text-xs text-[#9cb3ff] hover:underline"
-          >
-            Limpiar filtros
-          </button>
-        )}
-      </div>
-
-      {/* Results List */}
-      {filteredRides.length > 0 ? (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 sm:gap-6">
-          {filteredRides.map(ride => (
-            <RideCard
-              key={ride.id}
-              ride={ride}
-              onSelect={onSelectRide}
-              onOpenLiveTelemetry={onOpenLiveTelemetry}
-            />
-          ))}
-        </div>
-      ) : (
-        <div className="p-10 text-center bg-[#131722] border border-white/10 rounded-3xl">
-          <Car className="w-10 h-10 text-slate-500 mx-auto mb-3 opacity-50" />
-          <h3 className="text-base font-display font-bold text-white">
-            Sin resultados para estos filtros
-          </h3>
-          <p className="text-xs text-slate-400 mt-1 max-w-sm mx-auto">
-            Prueba ajustando el aporte máximo o la franja horaria para ver más opciones.
-          </p>
-        </div>
-      )}
-
-    </div>
+    </section>
   );
 };

@@ -89,3 +89,14 @@ export interface RoutePopular {
   image: string;
   travelTime: string;
 }
+
+export interface Booking {
+  id: string;
+  ride: Ride;
+  seatsBooked: number;
+  totalPrice: number;
+  pickupPoint: string;
+  passengerName: string;
+  securityPin: string;
+  createdAt: number;
+}

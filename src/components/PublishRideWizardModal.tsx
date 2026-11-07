@@ -1,503 +1,495 @@
-import React, { useState } from 'react';
-import { Ride } from '../types';
-import {
-  X,
-  MapPin,
-  Calendar,
-  Clock,
-  Users,
-  Car,
-  CheckCircle2,
-  ArrowRight,
-  ArrowLeft,
-  Coins,
-  ShieldCheck,
-  Sparkles
-} from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { ArrowLeft, ArrowRight, Check } from 'lucide-react';
+import type { Ride } from '../types';
+import { Button, Field, Modal, Stepper, cx, inputClass } from './ui/primitives';
+import { DEMO_USER } from '../data/demoUser';
+import { usd } from '../lib/rides';
+import SquishSwitch from './bits/SquishSwitch';
 
 interface PublishRideWizardModalProps {
+  isOpen: boolean;
   onClose: () => void;
-  onPublish: (newRide: Ride) => void;
+  onPublish: (ride: Ride) => void;
 }
 
-export const PublishRideWizardModal: React.FC<PublishRideWizardModalProps> = ({
-  onClose,
-  onPublish,
-}) => {
-  const [step, setStep] = useState<number>(1);
+const SV_CITIES = [
+  'San Salvador',
+  'Santa Tecla',
+  'Antiguo Cuscatlán',
+  'Santa Ana',
+  'La Libertad',
+  'San Miguel',
+  'Sonsonate',
+  'Colón',
+  'Zaragoza',
+  'Cojutepeque',
+  'San Vicente',
+  'Izalco',
+];
 
-  // Form states
-  const [originCity, setOriginCity] = useState('San Salvador (Multiplaza)');
-  const [originAddress, setOriginAddress] = useState('Bahía frente a Las Cascadas, Antiguo Cuscatlán');
-  const [destinationCity, setDestinationCity] = useState('Santa Ana (Metrocentro)');
-  const [destinationAddress, setDestinationAddress] = useState('Boulevard Los 44, entrada principal');
-  const [intermediateStop, setIntermediateStop] = useState('Santa Tecla (Parque San Martín)');
-  const [departureDate, setDepartureDate] = useState('Hoy, Miércoles');
-  const [departureTime, setDepartureTime] = useState('06:30 AM');
-  const [isRecurring, setIsRecurring] = useState(true);
-  const [seats, setSeats] = useState<number>(3);
-  const [pricePerSeat, setPricePerSeat] = useState<number>(3.50);
-  const [carModel, setCarModel] = useState('Toyota Corolla 2023');
-  const [carPlate, setCarPlate] = useState('P 814-920');
-  const [amenities, setAmenities] = useState<string[]>(['Aire acondicionado', 'Música tranquila', 'No fumar']);
-  const [isDone, setIsDone] = useState(false);
+const WEEK = [
+  { d: 1, l: 'Lun' },
+  { d: 2, l: 'Mar' },
+  { d: 3, l: 'Mié' },
+  { d: 4, l: 'Jue' },
+  { d: 5, l: 'Vie' },
+  { d: 6, l: 'Sáb' },
+  { d: 0, l: 'Dom' },
+];
+const FULL_DAY: Record<number, string> = { 0: 'Domingo', 1: 'Lunes', 2: 'Martes', 3: 'Miércoles', 4: 'Jueves', 5: 'Viernes', 6: 'Sábado' };
 
-  const quickCitiesOrigin = ['San Salvador', 'Santa Tecla', 'Antiguo Cuscatlán', 'Soyapango'];
-  const quickCitiesDest = ['Santa Ana', 'San Miguel', 'La Libertad / El Tunco', 'Sonsonate', 'Chalatenango'];
+const to12h = (hhmm: string) => {
+  const [h, m] = hhmm.split(':').map(Number);
+  const p = h >= 12 ? 'PM' : 'AM';
+  const h12 = h % 12 === 0 ? 12 : h % 12;
+  return `${String(h12).padStart(2, '0')}:${String(m).padStart(2, '0')} ${p}`;
+};
+const toMin = (hhmm: string) => {
+  const [h, m] = hhmm.split(':').map(Number);
+  return h * 60 + m;
+};
+const fmtDuration = (mins: number) => {
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  return h ? `${h}h${m ? ` ${String(m).padStart(2, '0')}m` : ''}` : `${m}m`;
+};
 
-  const handleNext = () => {
-    if (step < 5) setStep(step + 1);
+/** Describe los días elegidos: rangos consecutivos como "Lunes a Viernes". */
+export const describeDays = (days: number[]) => {
+  const order = WEEK.map((w) => w.d).filter((d) => days.includes(d));
+  if (!order.length) return '';
+  const idx = order.map((d) => WEEK.findIndex((w) => w.d === d));
+  const consecutive = idx.every((v, i) => i === 0 || v === idx[i - 1] + 1);
+  if (consecutive && order.length >= 3) return `${FULL_DAY[order[0]]} a ${FULL_DAY[order[order.length - 1]]}`;
+  return order.map((d) => FULL_DAY[d]).join(order.length === 2 ? ' y ' : ', ');
+};
+
+type Errors = Partial<Record<'originSpot' | 'destCity' | 'destSpot' | 'arrival' | 'days' | 'price' | 'car' | 'color' | 'plate', string>>;
+
+const initial = {
+  originCity: 'Santa Tecla',
+  originSpot: '',
+  stopCity: '',
+  stopSpot: '',
+  destCity: 'San Salvador',
+  destSpot: '',
+  departure: '07:00',
+  arrival: '07:45',
+  recurring: false,
+  days: [1, 2, 3, 4, 5] as number[],
+  seats: 3,
+  price: '3.00',
+  car: '',
+  color: '',
+  plate: '',
+  ac: true,
+  notes: '',
+};
+
+export const PublishRideWizardModal: React.FC<PublishRideWizardModalProps> = ({ isOpen, onClose, onPublish }) => {
+  const [step, setStep] = useState<1 | 2>(1);
+  const [f, setF] = useState(initial);
+  const [errors, setErrors] = useState<Errors>({});
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (isOpen) {
+      setStep(1);
+      setErrors({});
+      setSubmitting(false);
+    }
+  }, [isOpen]);
+
+  if (!isOpen) return null;
+
+  const set = <K extends keyof typeof initial>(k: K, v: (typeof initial)[K]) => {
+    setF((p) => ({ ...p, [k]: v }));
+    setErrors((e) => ({ ...e, [k]: undefined }));
   };
 
-  const handleBack = () => {
-    if (step > 1) setStep(step - 1);
+  const validateStep1 = (): Errors => {
+    const e: Errors = {};
+    if (f.originSpot.trim().length < 3) e.originSpot = 'Indica un punto de encuentro reconocible, por ejemplo una gasolinera o un centro comercial.';
+    if (f.destCity === f.originCity) e.destCity = 'El destino debe ser una ciudad distinta al origen.';
+    if (f.destSpot.trim().length < 3) e.destSpot = 'Indica dónde dejarás a los pasajeros.';
+    if (toMin(f.arrival) <= toMin(f.departure)) e.arrival = 'La llegada tiene que ser posterior a la hora de salida.';
+    if (f.recurring && f.days.length === 0) e.days = 'Elige al menos un día de la semana.';
+    return e;
   };
 
-  const handleFinish = () => {
-    setIsDone(true);
+  const validateStep2 = (): Errors => {
+    const e: Errors = {};
+    const price = Number(f.price.replace(',', '.'));
+    if (!Number.isFinite(price) || price < 0.5 || price > 25) e.price = 'El aporte debe estar entre $0.50 y $25.00.';
+    if (f.car.trim().length < 3) e.car = 'Escribe marca y modelo, por ejemplo “Toyota Corolla”.';
+    if (f.color.trim().length < 3) e.color = 'Indica el color para que te reconozcan.';
+    if (!/^[A-Z]{1,2}\s?\d{3}[-\s]?\d{3}$/i.test(f.plate.trim())) e.plate = 'Usa el formato de placa salvadoreña, por ejemplo P 123-456.';
+    return e;
+  };
 
-    const newRide: Ride = {
-      id: `ride-sv-${Date.now().toString().slice(-4)}`,
+  const focusFirstError = (formId: string) =>
+    window.requestAnimationFrame(() =>
+      document.querySelector<HTMLElement>(`#${formId} [aria-invalid="true"]`)?.focus()
+    );
+
+  const next = (ev: React.FormEvent) => {
+    ev.preventDefault();
+    const e = validateStep1();
+    setErrors(e);
+    if (Object.keys(e).length) {
+      focusFirstError('publish-step1');
+      return;
+    }
+    setStep(2);
+  };
+
+  const publish = (ev: React.FormEvent) => {
+    ev.preventDefault();
+    const e = validateStep2();
+    setErrors(e);
+    if (Object.keys(e).length) {
+      focusFirstError('publish-step2');
+      return;
+    }
+    setSubmitting(true);
+
+    const price = Number(Number(f.price.replace(',', '.')).toFixed(2));
+    const stamp = Date.now();
+    const [make, ...rest] = f.car.trim().split(/\s+/);
+    const recurringDays = f.recurring ? describeDays(f.days) : undefined;
+    const dep = to12h(f.departure);
+    const arr = to12h(f.arrival);
+
+    const ride: Ride = {
+      id: `ride-pub-${stamp}`,
       driver: {
-        id: 'drv-current-user',
-        name: 'Miguel Ángel Cortez',
-        role: 'Ingeniero de Software',
-        affiliation: 'Tigo SV / Torre Futura',
-        avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=300&q=80',
-        rating: 5.0,
-        totalTrips: 1,
-        verifiedDUI: true,
-        verifiedPhone: true,
-        phone: '+503 7842-1920',
-        memberSince: 'Octubre 2026',
-        bio: 'Comparto mi trayecto diario de ida y vuelta para apoyar a otros profesionales y amortizar la gasolina.',
-        reviews: [],
+        id: DEMO_USER.id,
+        name: DEMO_USER.name,
+        role: 'Conductor',
+        affiliation: 'Perfil de demostración',
+        avatar: `data:image/svg+xml,${encodeURIComponent(
+          '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" fill="#1a1a1d"/><circle cx="32" cy="25" r="11" fill="#3a3a40"/><path d="M12 56c3-11 11-16 20-16s17 5 20 16" fill="#3a3a40"/></svg>'
+        )}`,
+        rating: 0,
+        totalTrips: 0,
+        verifiedDUI: false,
+        verifiedPhone: false,
+        phone: '',
+        memberSince: DEMO_USER.memberSince,
       },
       vehicle: {
-        make: carModel.split(' ')[0] || 'Toyota',
-        model: carModel,
-        year: 2024,
-        type: 'Sedán Familiar',
-        plate: carPlate,
-        color: 'Gris Oscuro',
-        image: 'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&w=800&q=80',
-        features: amenities,
+        make: make ?? '',
+        model: rest.join(' '),
+        year: 0,
+        type: 'Particular',
+        plate: f.plate.trim().toUpperCase(),
+        color: f.color.trim(),
+        image: '',
+        features: f.ac ? ['Aire acondicionado'] : [],
       },
       origin: {
-        id: `w-orig-${Date.now()}`,
-        name: originCity,
-        city: originCity.split('(')[0].trim(),
-        time: departureTime,
+        id: `wp-o-${stamp}`,
+        name: f.originSpot.trim(),
+        city: f.originCity,
+        time: dep,
         type: 'origin',
-        address: originAddress,
+        address: `${f.originSpot.trim()}, ${f.originCity}`,
       },
-      waypoints: intermediateStop ? [
-        {
-          id: `w-stop-${Date.now()}`,
-          name: intermediateStop,
-          city: intermediateStop.split('(')[0].trim(),
-          time: '07:00 AM',
-          type: 'stop',
-          address: 'Punto intermedio sobre la carretera',
-        }
-      ] : [],
+      waypoints:
+        f.stopCity && f.stopSpot.trim()
+          ? [
+              {
+                id: `wp-s-${stamp}`,
+                name: f.stopSpot.trim(),
+                city: f.stopCity,
+                time: 'En ruta',
+                type: 'stop',
+                address: `${f.stopSpot.trim()}, ${f.stopCity}`,
+              },
+            ]
+          : [],
       destination: {
-        id: `w-dest-${Date.now()}`,
-        name: destinationCity,
-        city: destinationCity.split('(')[0].trim(),
-        time: '07:45 AM',
+        id: `wp-d-${stamp}`,
+        name: f.destSpot.trim(),
+        city: f.destCity,
+        time: arr,
         type: 'destination',
-        address: destinationAddress,
+        address: `${f.destSpot.trim()}, ${f.destCity}`,
       },
-      date: departureDate,
-      departureTime,
-      arrivalTime: '07:45 AM',
-      estimatedDuration: '1h 15m',
-      distanceKm: 64.0,
-      totalSeats: seats,
-      availableSeats: seats,
-      seatPrice: pricePerSeat,
-      gasContributionTotal: pricePerSeat * seats,
+      date: 'Hoy',
+      departureTime: dep,
+      arrivalTime: arr,
+      estimatedDuration: fmtDuration(toMin(f.arrival) - toMin(f.departure)),
+      distanceKm: 0,
+      totalSeats: f.seats,
+      availableSeats: f.seats,
+      seatPrice: price,
+      gasContributionTotal: Number((price * f.seats).toFixed(2)),
       status: 'scheduled',
-      amenities,
-      notes: 'Trayecto regular de trabajo. Puntualidad en el punto de encuentro.',
+      amenities: f.ac ? ['Aire acondicionado'] : [],
+      notes: f.notes.trim() || undefined,
       passengers: [],
-      isRecurring,
-      recurringDays: isRecurring ? 'Lunes a Viernes' : undefined,
+      isRecurring: f.recurring,
+      recurringDays,
     };
 
-    setTimeout(() => {
-      onPublish(newRide);
-    }, 900);
+    window.setTimeout(() => {
+      onPublish(ride);
+      setF(initial);
+    }, 450);
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/80 backdrop-blur-md overflow-y-auto">
-      <div className="relative w-full max-w-lg bg-[#131722] border border-white/10 rounded-3xl overflow-hidden shadow-2xl my-auto animate-in fade-in zoom-in-95 duration-200">
+  const cityOptions = (exclude?: string) =>
+    SV_CITIES.filter((c) => c !== exclude).map((c) => (
+      <option key={c} value={c}>
+        {c}
+      </option>
+    ));
 
-        {/* Header with step progress indicator (Ref 4 Style) */}
-        <div className="p-5 sm:p-6 bg-gradient-to-b from-[#1c2233] to-[#131722] border-b border-white/10">
-          <div className="flex items-center justify-between mb-4">
-            <span className="text-xs font-mono font-bold uppercase tracking-wider text-[#9cb3ff]">
-              Paso {step} de 5 · Publicar Asiento
-            </span>
-            <button
-              onClick={onClose}
-              className="w-8 h-8 rounded-full bg-[#0c0f17] border border-white/10 flex items-center justify-center text-slate-300 hover:text-white"
-            >
-              <X className="w-4 h-4" />
-            </button>
+  return (
+    <Modal
+      open
+      onClose={onClose}
+      eyebrow={`Publicar viaje · Paso ${step} de 2`}
+      title={step === 1 ? 'Ruta y horario' : 'Asientos, aporte y vehículo'}
+      footer={
+        <div className="flex items-center justify-between gap-3">
+          {step === 2 ? (
+            <Button variant="ghost" onClick={() => setStep(1)}>
+              <ArrowLeft className="w-4 h-4" aria-hidden="true" />
+              Atrás
+            </Button>
+          ) : (
+            <Button variant="ghost" onClick={onClose}>
+              Cancelar
+            </Button>
+          )}
+          {step === 1 ? (
+            <Button type="submit" form="publish-step1">
+              Continuar
+              <ArrowRight className="w-4 h-4" aria-hidden="true" />
+            </Button>
+          ) : (
+            <Button type="submit" form="publish-step2" loading={submitting}>
+              {submitting ? 'Publicando…' : 'Publicar viaje'}
+            </Button>
+          )}
+        </div>
+      }
+    >
+      <div className="h-1 rounded-full bg-white/10 overflow-hidden mb-6" aria-hidden="true">
+        <div className="h-full bg-accent transition-[width] duration-300" style={{ width: step === 1 ? '50%' : '100%' }} />
+      </div>
+
+      {step === 1 ? (
+        <form id="publish-step1" onSubmit={next} noValidate className="flex flex-col gap-6">
+          <div className="grid sm:grid-cols-2 gap-4">
+            <Field label="Ciudad de salida">
+              {(a) => (
+                <select {...a} value={f.originCity} onChange={(e) => set('originCity', e.target.value)} className={inputClass()}>
+                  {cityOptions()}
+                </select>
+              )}
+            </Field>
+            <Field label="Punto de encuentro" error={errors.originSpot}>
+              {(a) => (
+                <input {...a} value={f.originSpot} onChange={(e) => set('originSpot', e.target.value)} className={inputClass(!!errors.originSpot)} placeholder="Ej. Gasolinera Puma, Paseo El Carmen" />
+              )}
+            </Field>
           </div>
 
-          {/* Progress bar line */}
-          <div className="h-1.5 w-full bg-white/10 rounded-full overflow-hidden">
-            <div
-              className="h-full bg-gradient-to-r from-[#315cff] to-[#00a89d] rounded-full transition-all duration-300"
-              style={{ width: `${(step / 5) * 100}%` }}
+          <div className="grid sm:grid-cols-2 gap-4">
+            <Field label="Parada intermedia" optional>
+              {(a) => (
+                <select {...a} value={f.stopCity} onChange={(e) => set('stopCity', e.target.value)} className={inputClass()}>
+                  <option value="">Sin parada</option>
+                  {cityOptions(f.originCity)}
+                </select>
+              )}
+            </Field>
+            <Field label="Lugar de la parada" optional>
+              {(a) => (
+                <input
+                  {...a}
+                  value={f.stopSpot}
+                  disabled={!f.stopCity}
+                  onChange={(e) => set('stopSpot', e.target.value)}
+                  className={cx(inputClass(), !f.stopCity && 'opacity-50')}
+                  placeholder={f.stopCity ? 'Ej. Pasarela, centro comercial' : 'Elige primero una ciudad'}
+                />
+              )}
+            </Field>
+          </div>
+
+          <div className="grid sm:grid-cols-2 gap-4">
+            <Field label="Ciudad de llegada" error={errors.destCity}>
+              {(a) => (
+                <select {...a} value={f.destCity} onChange={(e) => set('destCity', e.target.value)} className={inputClass(!!errors.destCity)}>
+                  {cityOptions()}
+                </select>
+              )}
+            </Field>
+            <Field label="Punto de llegada" error={errors.destSpot}>
+              {(a) => (
+                <input {...a} value={f.destSpot} onChange={(e) => set('destSpot', e.target.value)} className={inputClass(!!errors.destSpot)} placeholder="Ej. Torre Futura, Escalón" />
+              )}
+            </Field>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <Field label="Hora de salida">
+              {(a) => <input {...a} type="time" value={f.departure} onChange={(e) => set('departure', e.target.value)} className={inputClass()} />}
+            </Field>
+            <Field label="Llegada estimada" error={errors.arrival}>
+              {(a) => <input {...a} type="time" value={f.arrival} onChange={(e) => set('arrival', e.target.value)} className={inputClass(!!errors.arrival)} />}
+            </Field>
+          </div>
+
+          <fieldset className="flex flex-col gap-3">
+            <legend className="text-[14px] mb-3">¿Cuándo sales?</legend>
+            <div className="grid grid-cols-2 gap-2" role="radiogroup">
+              {[
+                { v: false, l: 'Solo hoy' },
+                { v: true, l: 'Se repite cada semana' },
+              ].map((o) => (
+                <label
+                  key={String(o.v)}
+                  className={cx(
+                    'h-12 px-4 rounded-[12px] border flex items-center gap-3 cursor-pointer text-[15px]',
+                    f.recurring === o.v ? 'border-accent bg-accent-soft' : 'border-line-strong hover:border-white/20'
+                  )}
+                >
+                  <input type="radio" name="recurring" checked={f.recurring === o.v} onChange={() => set('recurring', o.v)} className="accent-[#21d2ed]" />
+                  {o.l}
+                </label>
+              ))}
+            </div>
+            {f.recurring ? (
+              <div className="flex flex-col gap-2">
+                <div className="flex flex-wrap gap-2" aria-label="Días de la semana">
+                  {WEEK.map((w) => {
+                    const on = f.days.includes(w.d);
+                    return (
+                      <button
+                        key={w.d}
+                        type="button"
+                        aria-pressed={on}
+                        onClick={() => set('days', on ? f.days.filter((d) => d !== w.d) : [...f.days, w.d])}
+                        className={cx(
+                          'w-12 h-11 rounded-[10px] border text-[14px] transition-colors',
+                          on ? 'bg-white text-ink border-white' : 'border-line-strong text-muted hover:text-fg'
+                        )}
+                      >
+                        {w.l}
+                      </button>
+                    );
+                  })}
+                </div>
+                {errors.days ? (
+                  <p className="text-[13px] text-danger">{errors.days}</p>
+                ) : (
+                  <p className="text-[13px] text-subtle">{describeDays(f.days)}</p>
+                )}
+              </div>
+            ) : null}
+          </fieldset>
+        </form>
+      ) : (
+        <form id="publish-step2" onSubmit={publish} noValidate className="flex flex-col gap-6">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <p className="text-[14px]">Asientos que ofreces</p>
+              <p className="t-small text-muted">Entre 1 y 4</p>
+            </div>
+            <Stepper label="Asientos ofrecidos" value={f.seats} min={1} max={4} onChange={(v) => set('seats', v)} />
+          </div>
+
+          <Field label="Aporte por asiento (USD)" error={errors.price} hint="Entre $0.50 y $25.00. Lo verán los pasajeros antes de reservar.">
+            {(a) => (
+              <div className="relative">
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-muted" aria-hidden="true">
+                  $
+                </span>
+                <input
+                  {...a}
+                  inputMode="decimal"
+                  value={f.price}
+                  onChange={(e) => set('price', e.target.value)}
+                  className={cx(inputClass(!!errors.price), 'pl-8 tabular')}
+                />
+              </div>
+            )}
+          </Field>
+
+          <div className="grid sm:grid-cols-2 gap-4">
+            <Field label="Marca y modelo" error={errors.car}>
+              {(a) => <input {...a} value={f.car} onChange={(e) => set('car', e.target.value)} className={inputClass(!!errors.car)} placeholder="Ej. Toyota Corolla" />}
+            </Field>
+            <Field label="Color" error={errors.color}>
+              {(a) => <input {...a} value={f.color} onChange={(e) => set('color', e.target.value)} className={inputClass(!!errors.color)} placeholder="Ej. Gris" />}
+            </Field>
+          </div>
+
+          <Field label="Placa" error={errors.plate}>
+            {(a) => (
+              <input
+                {...a}
+                value={f.plate}
+                onChange={(e) => set('plate', e.target.value.toUpperCase())}
+                className={cx(inputClass(!!errors.plate), 'tabular uppercase')}
+                placeholder="P 123-456"
+                autoCapitalize="characters"
+              />
+            )}
+          </Field>
+
+          <div className="flex items-center justify-between gap-3 text-[15px]">
+            <span>El carro tiene aire acondicionado</span>
+            <SquishSwitch
+              checked={f.ac}
+              onChange={(v) => set('ac', v)}
+              ariaLabel="El carro tiene aire acondicionado"
+              trackColor="rgba(255,255,255,0.12)"
+              trackOnColor="#21d2ed"
+              thumbColor="#ffffff"
+              thumbOnColor="#09090b"
+              width={46}
+              height={26}
             />
           </div>
-        </div>
 
-        {/* Dynamic Step Content */}
-        <div className="p-5 sm:p-6 min-h-[300px] flex flex-col justify-between">
-
-          {/* STEP 1: Origen */}
-          {step === 1 && (
-            <div className="space-y-4 animate-in fade-in">
-              <div>
-                <h3 className="text-xl font-display font-extrabold text-white">
-                  ¿De dónde sales?
-                </h3>
-                <p className="text-xs text-slate-400 mt-1">
-                  Indica tu punto de partida habitual en tu vehículo.
-                </p>
-              </div>
-
-              {/* Quick city suggestions */}
-              <div className="flex flex-wrap gap-1.5">
-                {quickCitiesOrigin.map(c => (
-                  <button
-                    key={c}
-                    type="button"
-                    onClick={() => setOriginCity(c)}
-                    className={`text-xs px-3 py-1.5 rounded-xl border transition-all ${
-                      originCity.includes(c)
-                        ? 'bg-[#315cff]/20 text-[#c4cfff] border-[#315cff]'
-                        : 'bg-[#0c0f17] text-slate-400 border-white/10'
-                    }`}
-                  >
-                    {c}
-                  </button>
-                ))}
-              </div>
-
-              <div>
-                <label className="text-[11px] font-mono uppercase text-slate-400 block mb-1">
-                  Zona o Punto Exacto
-                </label>
-                <input
-                  type="text"
-                  value={originCity}
-                  onChange={(e) => setOriginCity(e.target.value)}
-                  placeholder="Ej. Multiplaza / Plaza Salvador del Mundo"
-                  className="w-full p-3 text-sm bg-[#0c0f17] border border-white/10 rounded-2xl text-white focus:outline-none focus:border-[#315cff]"
-                />
-              </div>
-
-              <div>
-                <label className="text-[11px] font-mono uppercase text-slate-400 block mb-1">
-                  Referencia de parada
-                </label>
-                <input
-                  type="text"
-                  value={originAddress}
-                  onChange={(e) => setOriginAddress(e.target.value)}
-                  placeholder="Ej. Gasolinera Puma frente a Las Cascadas"
-                  className="w-full p-3 text-sm bg-[#0c0f17] border border-white/10 rounded-2xl text-white focus:outline-none focus:border-[#315cff]"
-                />
-              </div>
-            </div>
-          )}
-
-          {/* STEP 2: Destino */}
-          {step === 2 && (
-            <div className="space-y-4 animate-in fade-in">
-              <div>
-                <h3 className="text-xl font-display font-extrabold text-white">
-                  ¿A dónde te diriges?
-                </h3>
-                <p className="text-xs text-slate-400 mt-1">
-                  Las personas que tengan paradas dentro de esta ruta podrán solicitarte plaza.
-                </p>
-              </div>
-
-              {/* Quick destination suggestions */}
-              <div className="flex flex-wrap gap-1.5">
-                {quickCitiesDest.map(c => (
-                  <button
-                    key={c}
-                    type="button"
-                    onClick={() => setDestinationCity(c)}
-                    className={`text-xs px-3 py-1.5 rounded-xl border transition-all ${
-                      destinationCity.includes(c)
-                        ? 'bg-[#315cff]/20 text-[#c4cfff] border-[#315cff]'
-                        : 'bg-[#0c0f17] text-slate-400 border-white/10'
-                    }`}
-                  >
-                    {c}
-                  </button>
-                ))}
-              </div>
-
-              <div>
-                <label className="text-[11px] font-mono uppercase text-slate-400 block mb-1">
-                  Ciudad o Destino Final
-                </label>
-                <input
-                  type="text"
-                  value={destinationCity}
-                  onChange={(e) => setDestinationCity(e.target.value)}
-                  placeholder="Ej. Santa Ana / El Tunco"
-                  className="w-full p-3 text-sm bg-[#0c0f17] border border-white/10 rounded-2xl text-white focus:outline-none focus:border-[#315cff]"
-                />
-              </div>
-
-              <div>
-                <label className="text-[11px] font-mono uppercase text-slate-400 block mb-1">
-                  Parada intermedia en el camino (Opcional)
-                </label>
-                <input
-                  type="text"
-                  value={intermediateStop}
-                  onChange={(e) => setIntermediateStop(e.target.value)}
-                  placeholder="Ej. Santa Tecla (Paseo El Carmen / Parque San Martín)"
-                  className="w-full p-3 text-sm bg-[#0c0f17] border border-white/10 rounded-2xl text-white focus:outline-none focus:border-[#315cff]"
-                />
-                <span className="text-[10px] text-slate-500 mt-1 block">
-                  Solo si pasa por tu camino directo, sin desvíos molestos.
-                </span>
-              </div>
-            </div>
-          )}
-
-          {/* STEP 3: Fecha y Hora */}
-          {step === 3 && (
-            <div className="space-y-4 animate-in fade-in">
-              <div>
-                <h3 className="text-xl font-display font-extrabold text-white">
-                  ¿Cuándo sales?
-                </h3>
-                <p className="text-xs text-slate-400 mt-1">
-                  Hora puntual de salida desde tu punto de partida.
-                </p>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-[11px] font-mono uppercase text-slate-400 block mb-1">
-                    Día del viaje
-                  </label>
-                  <input
-                    type="text"
-                    value={departureDate}
-                    onChange={(e) => setDepartureDate(e.target.value)}
-                    placeholder="Hoy, Miércoles"
-                    className="w-full p-3 text-sm bg-[#0c0f17] border border-white/10 rounded-2xl text-white focus:outline-none focus:border-[#315cff]"
-                  />
-                </div>
-
-                <div>
-                  <label className="text-[11px] font-mono uppercase text-slate-400 block mb-1">
-                    Hora de salida
-                  </label>
-                  <input
-                    type="text"
-                    value={departureTime}
-                    onChange={(e) => setDepartureTime(e.target.value)}
-                    placeholder="06:30 AM"
-                    className="w-full p-3 text-sm bg-[#0c0f17] border border-white/10 rounded-2xl text-white focus:outline-none focus:border-[#315cff]"
-                  />
-                </div>
-              </div>
-
-              {/* Recurring Commute Toggle */}
-              <div className="p-3.5 rounded-2xl bg-[#0c0f17] border border-white/10 flex items-center justify-between">
-                <div>
-                  <span className="text-xs font-bold text-white block">¿Es tu ruta diaria de trabajo?</span>
-                  <span className="text-[11px] text-slate-400">Publicar para lunes a viernes automáticamente</span>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setIsRecurring(!isRecurring)}
-                  className={`px-3 py-1 text-xs font-bold rounded-xl transition-all ${
-                    isRecurring ? 'bg-[#315cff] text-slate-950' : 'bg-white/10 text-slate-400'
-                  }`}
-                >
-                  {isRecurring ? 'Sí, Recurrente' : 'Solo este día'}
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* STEP 4: Asientos y Aporte de Gasolina */}
-          {step === 4 && (
-            <div className="space-y-4 animate-in fade-in">
-              <div>
-                <h3 className="text-xl font-display font-extrabold text-white">
-                  Asientos & Aporte de Gasolina
-                </h3>
-                <p className="text-xs text-slate-400 mt-1">
-                  El aporte cubre proporcionalmente combustible y peajes. No es cobro con fines de lucro.
-                </p>
-              </div>
-
-              {/* Seats count */}
-              <div>
-                <label className="text-[11px] font-mono uppercase text-slate-400 block mb-1">
-                  Plazas libres en tu vehículo
-                </label>
-                <div className="grid grid-cols-4 gap-2">
-                  {[1, 2, 3, 4].map((n) => (
-                    <button
-                      key={n}
-                      type="button"
-                      onClick={() => setSeats(n)}
-                      className={`py-2.5 rounded-xl text-sm font-bold transition-all ${
-                        seats === n
-                          ? 'bg-[#315cff] text-slate-950 shadow-md'
-                          : 'bg-[#0c0f17] text-slate-400 border border-white/10'
-                      }`}
-                    >
-                      {n} {n === 1 ? 'asiento' : 'asientos'}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Price per seat in USD ($) */}
-              <div>
-                <label className="text-[11px] font-mono uppercase text-slate-400 block mb-1">
-                  Aporte sugerido por persona (USD $)
-                </label>
-                <div className="flex items-center gap-2">
-                  <span className="text-xl font-bold text-white">$</span>
-                  <input
-                    type="number"
-                    step="0.5"
-                    min="1"
-                    max="10"
-                    value={pricePerSeat}
-                    onChange={(e) => setPricePerSeat(Number(e.target.value))}
-                    className="flex-1 p-3 text-lg font-bold bg-[#0c0f17] border border-white/10 rounded-2xl text-[#c4cfff] focus:outline-none focus:border-[#315cff]"
-                  />
-                  <span className="text-xs text-slate-400 font-mono">USD</span>
-                </div>
-                <span className="text-[10px] text-slate-500 mt-1 block">
-                  Promedio en El Salvador para esta ruta: $3.00 - $4.00 USD.
-                </span>
-              </div>
-            </div>
-          )}
-
-          {/* STEP 5: Vehículo y Preferencias */}
-          {step === 5 && (
-            <div className="space-y-4 animate-in fade-in">
-              <div>
-                <h3 className="text-xl font-display font-extrabold text-white">
-                  Tu Vehículo & Reglas
-                </h3>
-                <p className="text-xs text-slate-400 mt-1">
-                  Para que los pasajeros identifiquen tu auto en el punto de encuentro.
-                </p>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-[11px] font-mono uppercase text-slate-400 block mb-1">
-                    Modelo del auto
-                  </label>
-                  <input
-                    type="text"
-                    value={carModel}
-                    onChange={(e) => setCarModel(e.target.value)}
-                    placeholder="Toyota Corolla"
-                    className="w-full p-2.5 text-xs bg-[#0c0f17] border border-white/10 rounded-xl text-white"
-                  />
-                </div>
-
-                <div>
-                  <label className="text-[11px] font-mono uppercase text-slate-400 block mb-1">
-                    Placa salvadoreña
-                  </label>
-                  <input
-                    type="text"
-                    value={carPlate}
-                    onChange={(e) => setCarPlate(e.target.value)}
-                    placeholder="P 814-920"
-                    className="w-full p-2.5 text-xs bg-[#0c0f17] border border-white/10 rounded-xl text-white"
-                  />
-                </div>
-              </div>
-
-              {/* Trust badge note */}
-              <div className="p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center gap-2.5 text-xs text-emerald-300">
-                <ShieldCheck className="w-5 h-5 shrink-0" />
-                <span>
-                  Tu perfil tiene <strong>DUI salvadoreño verificado</strong>. Los pasajeros viajarán con total confianza.
-                </span>
-              </div>
-            </div>
-          )}
-
-          {/* Wizard Action Controls */}
-          <div className="pt-6 border-t border-white/10 flex items-center justify-between gap-3 mt-6">
-            {step > 1 ? (
-              <button
-                type="button"
-                onClick={handleBack}
-                className="px-4 py-2.5 rounded-xl text-xs font-semibold text-slate-300 hover:text-white bg-[#0c0f17] border border-white/10 flex items-center gap-1.5"
-              >
-                <ArrowLeft className="w-3.5 h-3.5" />
-                <span>Atrás</span>
-              </button>
-            ) : (
-              <div />
+          <Field label="Nota para los pasajeros" optional>
+            {(a) => (
+              <textarea
+                {...a}
+                rows={3}
+                value={f.notes}
+                onChange={(e) => set('notes', e.target.value.slice(0, 200))}
+                className={cx(inputClass(), 'h-auto py-3 resize-none')}
+                placeholder="Ej. Salgo en punto. Solo equipaje de mano."
+              />
             )}
+          </Field>
 
-            {step < 5 ? (
-              <button
-                type="button"
-                onClick={handleNext}
-                className="px-6 py-2.5 rounded-xl text-xs font-bold text-slate-950 bg-[#315cff] hover:bg-cyan-300 shadow-md shadow-[#315cff]/20 flex items-center gap-1.5 ml-auto"
-              >
-                <span>Continuar</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </button>
-            ) : (
-              <button
-                type="button"
-                disabled={isDone}
-                onClick={handleFinish}
-                className="px-6 py-2.5 rounded-xl text-xs font-bold text-slate-950 bg-gradient-to-r from-[#315cff] to-[#00a89d] hover:from-[#4d77ff] hover:to-[#22c4b7] shadow-lg shadow-[#315cff]/25 flex items-center gap-1.5 ml-auto"
-              >
-                {isDone ? (
-                  <>
-                    <CheckCircle2 className="w-4 h-4 animate-bounce" />
-                    <span>Publicando...</span>
-                  </>
-                ) : (
-                  <>
-                    <CheckCircle2 className="w-4 h-4" />
-                    <span>Publicar Ruta Ahora</span>
-                  </>
-                )}
-              </button>
-            )}
+          <div className="surface-inset p-4 flex flex-col gap-2 t-small">
+            <p className="text-[14px] text-fg flex items-center gap-2">
+              <Check className="w-4 h-4 text-accent" aria-hidden="true" /> Resumen
+            </p>
+            <p className="text-muted">
+              {f.originCity} ({f.originSpot}) → {f.destCity} ({f.destSpot})
+            </p>
+            <p className="text-muted tabular">
+              Salida {to12h(f.departure)} · llegada {to12h(f.arrival)} · {f.recurring ? describeDays(f.days) : 'Solo hoy'}
+            </p>
+            <p className="text-muted tabular">
+              {f.seats} {f.seats === 1 ? 'asiento' : 'asientos'} · {usd(Number(f.price.replace(',', '.')) || 0)} por asiento
+            </p>
+            <p className="text-subtle mt-1">
+              Se publicará con tu perfil de demostración, marcado como “DUI sin verificar”.
+            </p>
           </div>
-
-        </div>
-
-      </div>
-    </div>
+        </form>
+      )}
+    </Modal>
   );
 };

@@ -12,6 +12,22 @@ export default defineConfig(() => {
         '@': path.resolve(import.meta.dirname, '.'),
       },
     },
+    build: {
+      target: 'es2022',
+      cssMinify: true,
+      rollupOptions: {
+        output: {
+          // Separa librerías grandes para que se cacheen aparte del código de NAR
+          manualChunks(id: string) {
+            if (!id.includes('node_modules')) return undefined;
+            if (id.includes('gsap')) return 'vendor-gsap';
+            if (id.includes('motion') || id.includes('framer')) return 'vendor-motion';
+            if (id.includes('react')) return 'vendor-react';
+            return 'vendor';
+          },
+        },
+      },
+    },
     server: {
       // HMR is disabled in AI Studio via DISABLE_HMR env var.
       // Do not modify—file watching is disabled to prevent flickering during agent edits.

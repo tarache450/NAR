@@ -8,7 +8,7 @@ export const POPULAR_ROUTES: RoutePopular[] = [
     intermediate: 'Paso por Santa Tecla y Lourdes Colón',
     avgPrice: 3.50,
     activeRidesCount: 24,
-    image: 'https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?auto=format&fit=crop&w=800&q=80',
+    image: 'https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?auto=format&fit=crop&w=560&q=75',
     travelTime: '1h 10m',
   },
   {
@@ -18,7 +18,7 @@ export const POPULAR_ROUTES: RoutePopular[] = [
     intermediate: 'Paso por Zaragoza y Carretera al Puerto',
     avgPrice: 3.00,
     activeRidesCount: 18,
-    image: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=800&q=80',
+    image: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=560&q=75',
     travelTime: '38m',
   },
   {
@@ -28,7 +28,7 @@ export const POPULAR_ROUTES: RoutePopular[] = [
     intermediate: 'Paso por Cojutepeque y San Vicente',
     avgPrice: 5.00,
     activeRidesCount: 15,
-    image: 'https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?auto=format&fit=crop&w=800&q=80',
+    image: 'https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?auto=format&fit=crop&w=560&q=75',
     travelTime: '2h 20m',
   },
   {
@@ -38,7 +38,7 @@ export const POPULAR_ROUTES: RoutePopular[] = [
     intermediate: 'Paso por Armenia e Izalco',
     avgPrice: 4.00,
     activeRidesCount: 12,
-    image: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=800&q=80',
+    image: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=560&q=75',
     travelTime: '1h 05m',
   },
 ];
@@ -265,7 +265,7 @@ export const INITIAL_RIDES: Ride[] = [
       name: 'Dr. Carlos Mendoza',
       role: 'Médico Residente',
       affiliation: 'Hospital Rosales / San Miguel',
-      avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80',
+      avatar: 'https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?auto=format&fit=crop&w=240&q=75',
       rating: 4.89,
       totalTrips: 112,
       verifiedDUI: true,
