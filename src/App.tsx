@@ -23,6 +23,7 @@ const PublishRideWizardModal = lazy(() =>
 );
 const BoardingPassModal = lazy(() => import('./components/BoardingPassModal').then((m) => ({ default: m.BoardingPassModal })));
 const RideChatModal = lazy(() => import('./components/RideChatModal').then((m) => ({ default: m.RideChatModal })));
+const AuthModal = lazy(() => import('./components/AuthModal').then((m) => ({ default: m.AuthModal })));
 
 const STORE_KEY = 'nar_demo_state_v2';
 
@@ -56,6 +57,7 @@ export function App() {
   const [passBookingId, setPassBookingId] = useState<string | null>(null);
   const [chatRideId, setChatRideId] = useState<string | null>(null);
   const [tripRideId, setTripRideId] = useState<string | null>(null);
+  const [authOpen, setAuthOpen] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
 
   useEffect(() => {
@@ -224,6 +226,7 @@ export function App() {
           rides={rides}
           bookings={freshBookings}
           onOpenPublish={() => setPublishOpen(true)}
+          onOpenAuth={() => setAuthOpen(true)}
           onSearch={() => navigate('search')}
           onOpenPass={(b) => setPassBookingId(b.id)}
           onOpenTrip={openTrip}
@@ -270,6 +273,7 @@ export function App() {
         activeView={view}
         onNavigate={(v) => navigate(v)}
         onOpenPublish={() => setPublishOpen(true)}
+        onOpenAuth={() => setAuthOpen(true)}
         activeTripCount={bookings.length}
       />
 
@@ -328,6 +332,7 @@ export function App() {
           />
         ) : null}
         {chatRideId ? <RideChatModal ride={rideById(chatRideId)} onClose={() => setChatRideId(null)} /> : null}
+        {authOpen ? <AuthModal isOpen onClose={() => setAuthOpen(false)} /> : null}
       </Suspense>
     </div>
   );

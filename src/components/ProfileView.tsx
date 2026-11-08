@@ -1,14 +1,15 @@
 import React, { useState } from 'react';
-import { Car, MessageSquare, Navigation, Plus, QrCode, RotateCcw, Search, User, Users } from 'lucide-react';
+import { Car, MessageSquare, Navigation, Plus, QrCode, RotateCcw, Search, User, Users, LogIn, LogOut, ShieldCheck, PhoneCall } from 'lucide-react';
 import type { Booking, Ride } from '../types';
 import { Badge, Button, EmptyState, Eyebrow } from './ui/primitives';
-import { DEMO_USER, DEMO_NOTICE } from '../data/demoUser';
 import { clock24, usd } from '../lib/rides';
+import { useAuth } from '../context/AuthContext';
 
 interface ProfileViewProps {
   rides: Ride[];
   bookings: Booking[];
   onOpenPublish: () => void;
+  onOpenAuth: () => void;
   onSearch: () => void;
   onOpenPass: (b: Booking) => void;
   onOpenTrip: (r: Ride) => void;
@@ -21,6 +22,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   rides,
   bookings,
   onOpenPublish,
+  onOpenAuth,
   onSearch,
   onOpenPass,
   onOpenTrip,
@@ -28,26 +30,75 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   onViewRide,
   onResetDemo,
 }) => {
+  const { user, profile, signOut, loading } = useAuth();
   const [confirmReset, setConfirmReset] = useState(false);
-  const published = rides.filter((r) => r.driver.id === DEMO_USER.id);
+
+  // Si no está autenticado, invitar a iniciar sesión
+  if (!user && !loading) {
+    return (
+      <section aria-labelledby="perfil-title" className="pt-[96px] md:pt-[124px] pb-24">
+        <div className="container-nar max-w-[640px] text-center">
+          <Eyebrow>Identidad Segura</Eyebrow>
+          <div className="card mt-6 p-8 sm:p-12 space-y-6">
+            <div className="w-16 h-16 rounded-full bg-primary/10 border border-primary/30 mx-auto flex items-center justify-center text-primary">
+              <LogIn className="w-8 h-8" />
+            </div>
+            <div className="space-y-2">
+              <h1 id="perfil-title" className="t-h3 text-white">
+                Ingresa a tu Perfil NAR
+              </h1>
+              <p className="t-small text-muted max-w-sm mx-auto">
+                Inicia sesión o regístrate en Supabase para gestionar tus reservas, validar tu DUI oficial y publicar viajes en El Salvador.
+              </p>
+            </div>
+            <Button variant="primary" size="lg" className="w-full" onClick={onOpenAuth}>
+              <LogIn className="w-4 h-4" />
+              <span>Iniciar Sesión / Registrarme</span>
+            </Button>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  const published = rides.filter((r) => r.driver.id === (user?.id || 'demo'));
 
   return (
     <section aria-labelledby="perfil-title" className="pt-[96px] md:pt-[124px] pb-24">
       <div className="container-nar max-w-[960px]">
-        <Eyebrow>Perfil</Eyebrow>
+        <div className="flex items-center justify-between">
+          <Eyebrow>Perfil de Usuario</Eyebrow>
+          <Button variant="outline" size="sm" onClick={() => signOut()} className="text-rose-400 border-rose-500/20 hover:bg-rose-500/10">
+            <LogOut className="w-3.5 h-3.5" />
+            <span>Cerrar Sesión</span>
+          </Button>
+        </div>
 
         <div className="card mt-4 p-6 sm:p-8 flex flex-col sm:flex-row sm:items-center gap-6">
-          <div className="w-20 h-20 rounded-full bg-surface-2 border border-line-strong flex items-center justify-center shrink-0">
-            <User className="w-8 h-8 text-muted" aria-hidden="true" />
+          <div className="w-20 h-20 rounded-full bg-surface-2 border border-line-strong flex items-center justify-center shrink-0 overflow-hidden">
+            {profile?.avatar_url ? (
+              <img src={profile.avatar_url} alt={profile.full_name || 'Perfil'} className="w-full h-full object-cover" />
+            ) : (
+              <User className="w-8 h-8 text-muted" aria-hidden="true" />
+            )}
           </div>
           <div className="flex-1 min-w-0">
             <h1 id="perfil-title" className="t-h3">
-              {DEMO_USER.name}
+              {profile?.full_name || user?.email?.split('@')[0]}
             </h1>
+            <p className="t-small text-muted mt-0.5">{user?.email}</p>
             <div className="flex flex-wrap gap-2 mt-3">
-              <Badge tone="warning">DUI sin verificar</Badge>
-              <Badge>Teléfono sin verificar</Badge>
-              <Badge>Perfil de demostración</Badge>
+              {profile?.dui_verified ? (
+                <Badge tone="success">✓ DUI Verificado</Badge>
+              ) : (
+                <Badge tone="warning">DUI: Validación pendiente</Badge>
+              )}
+              {profile?.phone ? (
+                <Badge tone="accent">{profile.phone}</Badge>
+              ) : (
+                <Badge tone="neutral">Teléfono sin registrar</Badge>
+              )}
+              <Badge tone="accent" className="capitalize">{profile?.role === 'driver' ? 'Conductor' : 'Pasajero'}</Badge>
             </div>
           </div>
           <dl className="grid grid-cols-2 gap-3 sm:w-[240px]">
@@ -61,10 +112,6 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             </div>
           </dl>
         </div>
-
-        <p className="t-small text-subtle mt-4">
-          La verificación de DUI y teléfono aún no está disponible en esta versión. {DEMO_NOTICE}
-        </p>
 
         {/* Reservas */}
         <div className="mt-14">
@@ -100,7 +147,10 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                       <Navigation className="w-4 h-4" aria-hidden="true" /> Mi viaje
                     </Button>
                     <Button size="sm" variant="outline" onClick={() => onOpenChat(b.ride)}>
-                      <MessageSquare className="w-4 h-4" aria-hidden="true" /> Escribir
+                      <MessageSquare className="w-4 h-4" aria-hidden="true" /> Chat
+                    </Button>
+                    <Button size="sm" variant="ghost" onClick={() => onViewRide(b.ride)}>
+                      Ver viaje
                     </Button>
                   </div>
                 </li>
@@ -108,23 +158,24 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             </ul>
           ) : (
             <EmptyState
-              icon={<Users className="w-5 h-5" />}
-              title="Todavía no has reservado"
-              description="Busca una salida en tu corredor y reserva tu asiento. Tus pases aparecerán aquí."
-              actions={<Button onClick={onSearch}>Buscar viaje</Button>}
+              title="Aún no tienes reservas activas"
+              description="Busca un asiento en los corredores San Salvador, Santa Ana, El Tunco o San Miguel y asegura tu lugar."
+              actions={
+                <Button size="md" onClick={onSearch}>
+                  <Search className="w-4 h-4" aria-hidden="true" /> Buscar viaje
+                </Button>
+              }
             />
           )}
         </div>
 
-        {/* Publicados */}
+        {/* Viajes publicados */}
         <div className="mt-14">
           <div className="flex items-end justify-between gap-4 mb-6">
             <h2 className="t-h4">Mis viajes publicados</h2>
-            {published.length ? (
-              <Button variant="outline" size="sm" onClick={onOpenPublish}>
-                <Plus className="w-4 h-4" aria-hidden="true" /> Publicar otro
-              </Button>
-            ) : null}
+            <Button size="sm" onClick={onOpenPublish}>
+              <Plus className="w-4 h-4" aria-hidden="true" /> Publicar nuevo
+            </Button>
           </div>
           {published.length ? (
             <ul className="flex flex-col gap-3">
@@ -135,57 +186,33 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                       {r.origin.city} → {r.destination.city}
                     </p>
                     <p className="t-small text-muted">
-                      {r.isRecurring && r.recurringDays ? r.recurringDays : r.date} · {clock24(r.departureTime)} · {usd(r.seatPrice)} por
-                      asiento
-                    </p>
-                    <p className="t-small mt-1 tabular">
-                      {r.totalSeats - r.availableSeats} de {r.totalSeats} asientos reservados
+                      {r.date} · {clock24(r.departureTime)} · {r.availableSeats} de {r.totalSeats} asientos libres · {usd(r.seatPrice)}/asiento
                     </p>
                   </div>
-                  <Button size="sm" variant="outline" onClick={() => onViewRide(r)}>
-                    <Car className="w-4 h-4" aria-hidden="true" /> Ver publicación
-                  </Button>
+                  <div className="flex flex-wrap gap-2 shrink-0">
+                    <Button size="sm" onClick={() => onViewRide(r)}>
+                      Ver detalle
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => onOpenChat(r)}>
+                      <MessageSquare className="w-4 h-4" aria-hidden="true" /> Chat
+                    </Button>
+                  </div>
                 </li>
               ))}
             </ul>
           ) : (
             <EmptyState
-              icon={<Car className="w-5 h-5" />}
-              title="No has publicado viajes"
-              description="Si haces un trayecto con asientos libres, publícalo y comparte la gasolina."
-              actions={<Button onClick={onOpenPublish}>Publicar viaje</Button>}
+              title="No has publicado ningún viaje todavía"
+              description="Si conduces a diario entre ciudades de El Salvador, publica tus asientos libres para compartir gastos de gasolina."
+              actions={
+                <Button size="md" onClick={onOpenPublish}>
+                  <Plus className="w-4 h-4" aria-hidden="true" /> Publicar viaje
+                </Button>
+              }
             />
           )}
         </div>
 
-        {/* Datos demo */}
-        <div className="mt-14 card p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <h2 className="t-h6">Datos de demostración</h2>
-            <p className="t-small text-muted mt-1">Borra tus reservas y publicaciones y vuelve a los viajes de ejemplo.</p>
-          </div>
-          {confirmReset ? (
-            <div className="flex gap-2">
-              <Button variant="ghost" size="sm" onClick={() => setConfirmReset(false)}>
-                Cancelar
-              </Button>
-              <Button
-                variant="danger"
-                size="sm"
-                onClick={() => {
-                  onResetDemo();
-                  setConfirmReset(false);
-                }}
-              >
-                Sí, restablecer
-              </Button>
-            </div>
-          ) : (
-            <Button variant="outline" size="sm" onClick={() => setConfirmReset(true)}>
-              <RotateCcw className="w-4 h-4" aria-hidden="true" /> Restablecer
-            </Button>
-          )}
-        </div>
       </div>
     </section>
   );
