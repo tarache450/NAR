@@ -15,39 +15,36 @@ import {
   Users,
   ChevronRight,
   Check,
+  Smartphone,
+  CheckCircle2,
+  Sparkles,
 } from 'lucide-react';
-import type { Booking, Ride } from '../types';
+import { QRCodeSVG } from 'qrcode.react';
+import type { Ride } from '../types';
 import {
   Decor,
   useRichEffects,
   AccordionItem,
   Badge,
   Button,
-  EmptyState,
   Eyebrow,
   Reveal,
   SectionHeader,
-  Segmented,
   ShaderBars,
   cx,
 } from './ui/primitives';
-import { RideCard } from './RideCard';
-import { SearchPanel, type SearchQuery } from './SearchPanel';
-import { clock24, minutesOfDay, usd, type Corridor } from '../lib/rides';
+import { clock24, usd, type Corridor } from '../lib/rides';
 import { FAQ_ITEMS } from '../data/content';
 import BlurText from './bits/BlurText';
-import RotatingText from './bits/RotatingText';
 import ShinyText from './bits/ShinyText';
-import CountUp from './bits/CountUp';
 import SpotlightCard from './bits/SpotlightCard';
 import Magnet from './bits/Magnet';
-import ClickSpark from './bits/ClickSpark';
 import LogoLoop from './bits/LogoLoop';
 import GradientText from './bits/GradientText';
-import BorderGlow from './bits/BorderGlow';
 import type { CardSwapHandle } from './bits/CardSwap';
+import { Logo } from './Logo';
 
-// Efectos pesados o fuera de la primera pantalla: se cargan aparte
+// Efectos dinámicos cargados bajo demanda
 const Aurora = lazy(() => import('./bits/Aurora'));
 const Noise = lazy(() => import('./bits/Noise'));
 const ScrollReveal = lazy(() => import('./bits/ScrollReveal'));
@@ -56,57 +53,42 @@ const CardSwap = lazy(() => import('./bits/CardSwap'));
 const SwapCard = lazy(() => import('./bits/CardSwap').then((m) => ({ default: m.Card })));
 
 const BRAND = ['#2d62ff', '#21d2ed', '#00c29a'];
-
 const SPOT = { spotlightColor: 'rgba(33, 210, 237, 0.22)', intensity: 0.12, spotlightSize: 320, theme: 'dark' as const };
 
 interface HomeViewProps {
   rides: Ride[];
   corridors: Corridor[];
   places: string[];
-  query: SearchQuery;
-  onQueryChange: (q: SearchQuery) => void;
-  onSearch: (q: SearchQuery) => void;
-  onSelectRide: (ride: Ride) => void;
-  onOpenPublish: () => void;
+  onOpenAuth: () => void;
   onSelectCorridor: (origin: string, destination: string) => void;
-  onBrowseAll: () => void;
-  activeBooking: Booking | null;
-  onOpenPass: () => void;
-  onTrackBooking: () => void;
 }
 
 export const HomeView: React.FC<HomeViewProps> = (p) => {
   const sample = p.rides[0];
   return (
     <>
-      <Hero {...p} />
+      <Hero onOpenAuth={p.onOpenAuth} corridors={p.corridors} />
       <MeetingPointsStrip rides={p.rides} />
-      {p.activeBooking ? (
-        <ActiveBookingBar booking={p.activeBooking} onOpenPass={p.onOpenPass} onTrack={p.onTrackBooking} />
-      ) : null}
-      <TodaySection rides={p.rides} onSelectRide={p.onSelectRide} onBrowseAll={p.onBrowseAll} onOpenPublish={p.onOpenPublish} />
       {sample ? <FeaturesSection ride={sample} /> : null}
+      <AppDownloadSection onOpenAuth={p.onOpenAuth} />
       <Manifesto />
-      <AudienceSection onSearch={p.onBrowseAll} onOpenPublish={p.onOpenPublish} />
-      <HowItWorks />
-      <SafetySection onBrowseAll={p.onBrowseAll} />
-      <CorridorsSection corridors={p.corridors} onSelectCorridor={p.onSelectCorridor} />
+      <AudienceSection onOpenAuth={p.onOpenAuth} />
+      <HowItWorks onOpenAuth={p.onOpenAuth} />
+      <SafetySection onOpenAuth={p.onOpenAuth} />
+      <CorridorsSection corridors={p.corridors} onSelectCorridor={p.onSelectCorridor} onOpenAuth={p.onOpenAuth} />
       <CorridorBand corridors={p.corridors} />
       <FaqSection />
-      <ClosingCta onBrowseAll={p.onBrowseAll} onOpenPublish={p.onOpenPublish} />
+      <ClosingCta onOpenAuth={p.onOpenAuth} />
     </>
   );
 };
 
-/* ── Hero ───────────────────────────────────────────────────────────────── */
+/* ── Hero Informativo y Embudo de Conversión ────────────────────────────── */
 
-const Hero: React.FC<HomeViewProps> = ({ query, onQueryChange, onSearch, places, onOpenPublish, rides = [], corridors = [] }) => {
-  const free = rides.reduce((n, r) => n + Math.max(0, r.availableSeats), 0);
-  const safeCorridors = corridors || [];
-  const destinations = useMemo(() => [...new Set(safeCorridors.map((c) => c.destination))], [safeCorridors]);
+const Hero: React.FC<{ onOpenAuth: () => void; corridors: Corridor[] }> = ({ onOpenAuth }) => {
   const rich = useRichEffects();
   return (
-    <section className="relative overflow-hidden pt-[104px] md:pt-[148px] pb-[140px] md:pb-[220px]" aria-labelledby="hero-title">
+    <section className="relative overflow-hidden pt-[112px] md:pt-[160px] pb-[100px] md:pb-[140px]" aria-labelledby="hero-title">
       <div className="absolute inset-x-0 top-0 h-[60%] pointer-events-none opacity-60 [mask-image:linear-gradient(to_bottom,#000_35%,transparent)]" aria-hidden="true">
         <Decor when={rich}>
           <Aurora colorStops={BRAND} amplitude={0.9} blend={0.55} speed={0.6} opacity={0.55} />
@@ -121,64 +103,97 @@ const Hero: React.FC<HomeViewProps> = ({ query, onQueryChange, onSearch, places,
 
       <div className="container-nar relative flex flex-col items-center text-center">
         <Reveal>
-          <p className="inline-flex items-center gap-2 h-8 pl-1 pr-3 rounded-full border border-line-strong bg-surface/70 text-[13px] whitespace-nowrap">
-            <span className="h-6 px-2 rounded-full bg-accent text-ink text-[11px] font-medium inline-flex items-center">
-              El Salvador
+          <p className="inline-flex items-center gap-2 h-8 pl-1 pr-3 rounded-full border border-line-strong bg-surface/80 text-[13px] whitespace-nowrap backdrop-blur">
+            <span className="h-6 px-2 rounded-full bg-accent text-ink text-[11px] font-bold inline-flex items-center">
+              El Salvador 🇸🇻
             </span>
-            <ShinyText color="#ffffff" shineColor="#21d2ed" speed={3.2} delay={1.2} className="tabular">
-              {free} asientos libres<span className="hidden sm:inline"> en {rides.length} salidas programadas</span>
+            <ShinyText color="#ffffff" shineColor="#21d2ed" speed={3.2} delay={1.2} className="tabular font-medium">
+              La primera app móvil de carpool interurbano
             </ShinyText>
           </p>
         </Reveal>
 
-        <h1 id="hero-title" className="t-h1 mt-6 max-w-[900px] flex flex-col items-center">
+        <h1 id="hero-title" className="t-h1 mt-6 max-w-[920px] flex flex-col items-center">
           <BlurText text="Tu ruta diaria," animateBy="words" direction="bottom" delay={90} trigger="load" className="justify-center" />
           <span className="flex flex-wrap items-baseline justify-center gap-x-[0.28em]">
             <GradientText colors={BRAND} animationSpeed={6} className="!inline-flex">
               compartida
             </GradientText>
-            <span className="text-muted">hasta</span>
-            {destinations.length > 1 ? (
-              <RotatingText
-                texts={destinations}
-                rotationInterval={3200}
-                animatePresenceMode="wait"
-                staggerDuration={0.015}
-                staggerFrom="first"
-                mainClassName="inline-flex overflow-hidden pb-[0.08em] text-accent"
-                splitLevelClassName="overflow-hidden"
-                transition={{ type: 'spring', damping: 30, stiffness: 400 }}
-              />
-            ) : (
-              <span className="text-accent">{destinations[0] ?? 'tu destino'}</span>
-            )}
+            <span className="text-muted">en comunidad.</span>
           </span>
         </h1>
 
         <Reveal delay={160}>
-          <p className="t-lead text-fg/90 mt-5 max-w-[560px]">
-            Reserva un asiento con conductores verificados que ya van por tu mismo corredor. Aporte fijo en dólares,
-            paradas acordadas y pase con PIN.
+          <p className="t-lead text-muted mt-6 max-w-[620px] mx-auto leading-relaxed">
+            NAR conecta a conductores y pasajeros verificados con DUI en El Salvador. Ahorra tiempo, divide gastos de gasolina y viaja seguro y cómodo cada día desde tu teléfono móvil.
           </p>
         </Reveal>
 
-        <Reveal delay={240} className="w-full max-w-[1080px] mt-10">
-          <ClickSpark sparkColor="#21d2ed" sparkCount={10} sparkRadius={22} sparkSize={9} duration={420}>
-            <SearchPanel value={query} onChange={onQueryChange} onSubmit={onSearch} places={places} submitLabel="Buscar viaje" highlight />
-          </ClickSpark>
-          <p className="mt-5 t-small text-muted">
-            ¿Manejas en una de estas rutas?{' '}
-            <button type="button" onClick={onOpenPublish} className="text-fg underline underline-offset-4 decoration-white/30 hover:decoration-white cursor-pointer">
-              Únete a la red de conductores verificados
+        {/* Botones de Acción del Embudo */}
+        <Reveal delay={240} className="w-full max-w-[640px] mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
+          <Magnet padding={60} magnetStrength={4} maxOffset={10}>
+            <a
+              href="#descargar-app"
+              onClick={(e) => {
+                e.preventDefault();
+                document.getElementById('descargar-app')?.scrollIntoView({ behavior: 'smooth' });
+              }}
+              className="h-12 px-7 rounded-xl font-bold bg-accent text-ink flex items-center justify-center gap-2.5 shadow-lg shadow-accent/25 hover:brightness-110 transition-all cursor-pointer w-full sm:w-auto"
+            >
+              <Smartphone className="w-4 h-4" />
+              <span>Conoce la App Móvil</span>
+            </a>
+          </Magnet>
+          <Magnet padding={60} magnetStrength={4} maxOffset={10}>
+            <button
+              type="button"
+              onClick={onOpenAuth}
+              className="h-12 px-7 rounded-xl font-medium border border-line-strong hover:border-white/40 text-white flex items-center justify-center gap-2 cursor-pointer bg-surface/70 backdrop-blur transition-all w-full sm:w-auto"
+            >
+              <ShieldCheck className="w-4 h-4 text-accent" />
+              <span>Crear mi Perfil / Ingresar</span>
             </button>
-          </p>
+          </Magnet>
+        </Reveal>
+
+        {/* 3 Pilares Informativos en el Hero */}
+        <Reveal delay={320} className="mt-14 grid grid-cols-1 sm:grid-cols-3 gap-4 w-full max-w-[860px]">
+          <div className="p-4 rounded-2xl bg-surface/60 border border-line flex items-center gap-3.5 text-left">
+            <div className="w-10 h-10 rounded-xl bg-accent-soft text-accent flex items-center justify-center shrink-0">
+              <ShieldCheck className="w-5 h-5" />
+            </div>
+            <div>
+              <p className="text-xs font-bold text-white">DUI Verificado</p>
+              <p className="text-[11px] text-muted">Comunidad salvadoreña 100% identificada.</p>
+            </div>
+          </div>
+
+          <div className="p-4 rounded-2xl bg-surface/60 border border-line flex items-center gap-3.5 text-left">
+            <div className="w-10 h-10 rounded-xl bg-accent-soft text-accent flex items-center justify-center shrink-0">
+              <Car className="w-5 h-5" />
+            </div>
+            <div>
+              <p className="text-xs font-bold text-white">Aporte Justo en USD</p>
+              <p className="text-[11px] text-muted">Comparte combustible sin tarifas abusivas.</p>
+            </div>
+          </div>
+
+          <div className="p-4 rounded-2xl bg-surface/60 border border-line flex items-center gap-3.5 text-left">
+            <div className="w-10 h-10 rounded-xl bg-accent-soft text-accent flex items-center justify-center shrink-0">
+              <Navigation className="w-5 h-5" />
+            </div>
+            <div>
+              <p className="text-xs font-bold text-white">Rutas Interurbanas</p>
+              <p className="text-[11px] text-muted">San Salvador, Santa Ana, San Miguel y más.</p>
+            </div>
+          </div>
         </Reveal>
       </div>
     </section>
   );
 };
 
-/* ── Franja de puntos de encuentro (equivale a la franja de logos) ─────── */
+/* ── Franja de Ciudades y Puntos de Encuentro ─────────────────────────── */
 
 const MeetingPointsStrip: React.FC<{ rides: Ride[] }> = ({ rides }) => {
   const points = useMemo(() => {
@@ -186,144 +201,32 @@ const MeetingPointsStrip: React.FC<{ rides: Ride[] }> = ({ rides }) => {
     rides.forEach((r) => [r.origin, ...r.waypoints, r.destination].forEach((w) => set.add(w.name)));
     return [...set];
   }, [rides]);
+
   return (
-    <section aria-labelledby="puntos-title" className="py-14 border-y border-line">
+    <section aria-labelledby="puntos-title" className="py-12 border-y border-line bg-surface/[0.2]">
       <div className="container-nar">
-        <p id="puntos-title" className="t-lead text-muted text-center">
-          Puntos de encuentro en las salidas de hoy
+        <p id="puntos-title" className="t-small text-muted text-center uppercase tracking-wider font-mono">
+          Corredores y puntos de encuentro conectados en El Salvador
         </p>
       </div>
-      <div className="mt-8 [mask-image:linear-gradient(90deg,transparent,#000_12%,#000_88%,transparent)]">
+      <div className="mt-6 [mask-image:linear-gradient(90deg,transparent,#000_12%,#000_88%,transparent)]">
         <LogoLoop
           logos={points.map((p) => ({
             node: (
-              <span className="flex items-center gap-2.5 text-[18px] font-medium tracking-[-0.03em] whitespace-nowrap text-fg">
+              <span className="flex items-center gap-2 text-[16px] font-medium tracking-tight whitespace-nowrap text-fg/90">
                 <MapPin className="w-4 h-4 text-accent" aria-hidden="true" />
                 {p}
               </span>
             ),
             title: p,
           }))}
-          speed={45}
-          gap={48}
-          logoHeight={28}
+          speed={40}
+          gap={44}
+          logoHeight={26}
           pauseOnHover
           fadeOut={false}
           ariaLabel="Puntos de encuentro"
         />
-      </div>
-    </section>
-  );
-};
-
-/* ── Reserva activa ─────────────────────────────────────────────────────── */
-
-const ActiveBookingBar: React.FC<{ booking: Booking; onOpenPass: () => void; onTrack: () => void }> = ({
-  booking,
-  onOpenPass,
-  onTrack,
-}) => (
-  <div className="container-nar mt-10">
-    <BorderGlow colors={BRAND} glowColor="190 85 55" backgroundColor="#111113" borderRadius={16} glowRadius={28} animated>
-    <div className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-      <div className="flex items-center gap-4 min-w-0">
-        <div className="w-11 h-11 rounded-[12px] bg-accent-soft text-accent flex items-center justify-center shrink-0">
-          <QrCode className="w-5 h-5" aria-hidden="true" />
-        </div>
-        <div className="min-w-0">
-          <p className="t-tag text-accent">Reserva {booking.id}</p>
-          <p className="text-[16px] mt-1.5 truncate">
-            {booking.ride.origin.city} → {booking.ride.destination.city} · {booking.ride.departureTime}
-          </p>
-        </div>
-      </div>
-      <div className="flex gap-2">
-        <Button variant="outline" size="sm" onClick={onTrack}>
-          Ver mi viaje
-        </Button>
-        <Button size="sm" onClick={onOpenPass}>
-          Abrir pase
-        </Button>
-      </div>
-    </div>
-    </BorderGlow>
-  </div>
-);
-
-/* ── Salidas de hoy ─────────────────────────────────────────────────────── */
-
-type Slot = 'all' | 'am' | 'pm';
-
-const TodaySection: React.FC<{
-  rides: Ride[];
-  onSelectRide: (r: Ride) => void;
-  onBrowseAll: () => void;
-  onOpenPublish: () => void;
-}> = ({ rides, onSelectRide, onBrowseAll, onOpenPublish }) => {
-  const [slot, setSlot] = useState<Slot>('all');
-  const list = rides
-    .filter((r) => r.date === 'Hoy')
-    .filter((r) => {
-      const h = minutesOfDay(r.departureTime) / 60;
-      return slot === 'all' ? true : slot === 'am' ? h < 12 : h >= 12;
-    })
-    .sort((a, b) => minutesOfDay(a.departureTime) - minutesOfDay(b.departureTime));
-
-  return (
-    <section id="salidas" aria-labelledby="salidas-title" className="section">
-      <div className="container-nar">
-        <Reveal>
-          <SectionHeader
-            id="salidas-title"
-            eyebrow="Salidas de hoy"
-            title="Asientos libres hoy."
-            muted="Elige uno y resérvalo."
-            actions={
-              <>
-                <Segmented<Slot>
-                  label="Filtrar por horario"
-                  value={slot}
-                  onChange={setSlot}
-                  options={[
-                    { value: 'all', label: 'Todo el día' },
-                    { value: 'am', label: 'Mañana' },
-                    { value: 'pm', label: 'Tarde' },
-                  ]}
-                />
-                <Button variant="outline" onClick={onBrowseAll}>
-                  Más filtros
-                  <ArrowRight className="w-4 h-4" aria-hidden="true" />
-                </Button>
-              </>
-            }
-          />
-        </Reveal>
-
-        <div className="mt-12 md:mt-16">
-          {list.length ? (
-            <ul className="grid gap-4 md:grid-cols-2">
-              {list.map((r, i) => (
-                <Reveal as="li" key={r.id} delay={i * 60}>
-                  <RideCard ride={r} onSelect={onSelectRide} />
-                </Reveal>
-              ))}
-            </ul>
-          ) : (
-            <EmptyState
-              icon={<Compass className="w-5 h-5" />}
-              title="No hay salidas en este horario"
-              description="Prueba con otro horario o publica tu propio viaje para compartir gastos en tu corredor."
-              actions={
-                <>
-                  <Button variant="outline" onClick={() => setSlot('all')}>
-                    Ver todo el día
-                  </Button>
-                  <Button onClick={onOpenPublish}>Registrarme como conductor</Button>
-                </>
-              }
-            />
-          )}
-        </div>
       </div>
     </section>
   );
@@ -350,10 +253,10 @@ const MiniPanel: React.FC<{ title: string; children: React.ReactNode }> = ({ tit
 const FeaturesSection: React.FC<{ ride: Ride }> = ({ ride }) => {
   const items = [
     {
-      title: 'Busca tu corredor',
-      text: 'Escribe de dónde sales y a dónde vas. NAR también encuentra los viajes que pasan por tu parada.',
+      title: 'Encuentra tu ruta en segundos',
+      text: 'Explora salidas programadas hacia tu trabajo, universidad o destinos de descanso con puntos de encuentro públicos y seguros.',
       scene: (
-        <MiniPanel title="Buscar viaje">
+        <MiniPanel title="Rutas en la App">
           <div className="space-y-2">
             <div className="h-9 rounded-[8px] bg-surface-2 border border-line px-3 flex items-center gap-2 text-[12px]">
               <MapPin className="w-3.5 h-3.5 text-accent" aria-hidden="true" />
@@ -363,58 +266,57 @@ const FeaturesSection: React.FC<{ ride: Ride }> = ({ ride }) => {
               <Navigation className="w-3.5 h-3.5" aria-hidden="true" />
               {ride.destination.city}
             </div>
-            <div className="h-9 rounded-[8px] bg-white text-ink flex items-center justify-center gap-2 text-[12px] font-medium">
-              <Search className="w-3.5 h-3.5" aria-hidden="true" /> Buscar
+            <div className="h-9 rounded-[8px] bg-accent text-ink flex items-center justify-center gap-2 text-[12px] font-bold">
+              <Sparkles className="w-3.5 h-3.5" aria-hidden="true" /> Rutas directas
             </div>
           </div>
         </MiniPanel>
       ),
     },
     {
-      title: 'Reserva con pase y PIN',
-      text: 'Eliges punto de subida y asientos. Al confirmar recibes un pase digital con un PIN para abordar.',
+      title: 'Pase digital y check-in con QR',
+      text: 'Cada pasajero cuenta con un pase de abordaje único con PIN de seguridad y código QR verificable por el conductor al subir.',
       scene: (
-        <MiniPanel title="Pase de abordaje">
+        <MiniPanel title="Pase de abordaje móvil">
           <div className="flex items-center gap-3">
             <div className="text-[12px] space-y-1">
               <p className="text-muted">PIN de abordaje</p>
-              <p className="text-[32px] leading-none tracking-[0.12em] tabular">48-21</p>
+              <p className="text-[32px] font-bold text-accent leading-none tracking-[0.12em] tabular">48-21</p>
             </div>
           </div>
           <p className="mt-3 text-[12px] text-muted">
-            {ride.origin.city} → {ride.destination.city} · {clock24(ride.departureTime)}
+            {ride.origin.city} → {ride.destination.city} · Verificado con DUI
           </p>
         </MiniPanel>
       ),
     },
     {
-      title: 'Sigue y comparte el viaje',
-      text: 'Ve el avance por paradas, escribe al conductor y comparte los datos del vehículo con quien tú elijas.',
+      title: 'Seguimiento y botón de auxilio SOS',
+      text: 'Comparte tu trayecto en vivo con tus familiares por WhatsApp y viaja con acceso directo al sistema de emergencias en un toque.',
       scene: (
-        <MiniPanel title="Mi viaje">
+        <MiniPanel title="Seguridad en cabina">
           <div className="space-y-2.5">
-            {[ride.origin, ...ride.waypoints, ride.destination].slice(0, 3).map((w, i) => (
-              <div key={w.id} className="flex items-center justify-between text-[12px]">
-                <span className="flex items-center gap-2">
-                  <span className={cx('w-2 h-2 rounded-full', i === 0 ? 'bg-accent' : 'bg-white/30')} />
-                  {w.city}
-                </span>
-                <span className="text-muted tabular">{clock24(w.time)}</span>
-              </div>
-            ))}
-            <div className="h-1.5 rounded-full bg-white/10 overflow-hidden">
-              <div className="h-full w-[45%] bg-accent rounded-full" />
+            <div className="flex items-center justify-between text-[12px]">
+              <span className="flex items-center gap-2 text-accent font-bold">
+                <ShieldCheck className="w-4 h-4" /> Enlace de monitoreo
+              </span>
+              <span className="text-muted tabular">Activo</span>
             </div>
+            <div className="h-1.5 rounded-full bg-white/10 overflow-hidden">
+              <div className="h-full w-[65%] bg-accent rounded-full" />
+            </div>
+            <p className="text-[11px] text-muted">Datos de placa y conductor encriptados.</p>
           </div>
         </MiniPanel>
       ),
     },
   ];
+
   return (
     <section aria-labelledby="que-hace-title" className="section border-t border-line">
       <div className="container-nar">
         <Reveal>
-          <SectionHeader id="que-hace-title" eyebrow="Qué hace NAR" title="Todo tu trayecto," muted="en una sola app." />
+          <SectionHeader id="que-hace-title" eyebrow="La Experiencia NAR" title="Todo tu viaje resuelto," muted="en una sola aplicación móvil." />
         </Reveal>
         <div className="mt-12 md:mt-16 grid gap-4 md:grid-cols-3">
           {items.map((it, i) => (
@@ -436,48 +338,182 @@ const FeaturesSection: React.FC<{ ride: Ride }> = ({ ride }) => {
   );
 };
 
-/* ── Para quién: pasajeros y conductores (patrón "use cases") ──────────── */
+/* ── Sección de Descarga de la App Móvil (El Embudo Principal) ──────────── */
 
-const AudienceSection: React.FC<{ onSearch: () => void; onOpenPublish: () => void }> = ({ onSearch, onOpenPublish }) => {
+export const AppDownloadSection: React.FC<{ onOpenAuth: () => void }> = ({ onOpenAuth }) => {
+  return (
+    <section id="descargar-app" aria-labelledby="download-title" className="section relative border-t border-line overflow-hidden">
+      <div className="container-nar">
+        <div className="card relative overflow-hidden p-8 sm:p-12 md:p-16 border border-accent/25 bg-gradient-to-br from-[#12151e] via-[#0d0f17] to-[#08090d]">
+          <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-accent/10 rounded-full blur-[140px] pointer-events-none" />
+
+          <div className="relative grid lg:grid-cols-[1.1fr_1fr] gap-12 items-center">
+            {/* Lado Izquierdo: Textos del embudo */}
+            <div className="flex flex-col gap-6 text-left">
+              <Reveal>
+                <Eyebrow>Aplicación Oficial</Eyebrow>
+                <h2 id="download-title" className="t-h2 mt-3">
+                  Lleva a NAR en tu bolsillo.{' '}
+                  <GradientText colors={BRAND} animationSpeed={5} className="!inline-flex">
+                    Viaja mejor cada día.
+                  </GradientText>
+                </h2>
+                <p className="t-body text-muted mt-4 max-w-[500px]">
+                  NAR es una aplicación nativa creada para la movilidad real de El Salvador. Desde tu teléfono podrás encontrar rutas diarias, coordinar paradas públicas y validar tu viaje con total seguridad.
+                </p>
+              </Reveal>
+
+              <Reveal delay={120}>
+                <div className="grid sm:grid-cols-2 gap-4 my-2">
+                  <div className="p-4 rounded-xl bg-surface/80 border border-line flex flex-col gap-1.5">
+                    <span className="text-accent font-bold text-sm flex items-center gap-2">
+                      <ShieldCheck className="w-4 h-4" /> 100% Verificado
+                    </span>
+                    <span className="text-xs text-muted">
+                      Conductores y pasajeros registrados con DUI salvadoreño oficial.
+                    </span>
+                  </div>
+                  <div className="p-4 rounded-xl bg-surface/80 border border-line flex flex-col gap-1.5">
+                    <span className="text-accent font-bold text-sm flex items-center gap-2">
+                      <Navigation className="w-4 h-4" /> GPS en Vivo
+                    </span>
+                    <span className="text-xs text-muted">
+                      Seguimiento en tiempo real de tu ruta y botón SOS de emergencia.
+                    </span>
+                  </div>
+                </div>
+              </Reveal>
+
+              <Reveal delay={200} className="flex flex-wrap items-center gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={onOpenAuth}
+                  className="h-12 px-7 rounded-xl font-bold bg-accent text-ink flex items-center gap-2 shadow-lg shadow-accent/25 hover:brightness-110 transition-all cursor-pointer"
+                >
+                  <Smartphone className="w-4 h-4" />
+                  <span>Crear mi Perfil / Preregistro</span>
+                </button>
+                <div className="flex items-center gap-2 text-xs text-muted px-3 py-2">
+                  <span className="w-2 h-2 rounded-full bg-accent animate-pulse" />
+                  <span>Próximamente en App Store & Google Play</span>
+                </div>
+              </Reveal>
+            </div>
+
+            {/* Lado Derecho: Mockup Smartphone & QR */}
+            <Reveal delay={160} className="flex justify-center">
+              <div className="relative w-full max-w-[320px] rounded-[36px] p-3.5 bg-gradient-to-b from-white/20 via-white/5 to-white/10 shadow-2xl border border-white/15">
+                <div className="w-full rounded-[28px] bg-[#0c0f17] border border-line overflow-hidden p-6 flex flex-col items-center text-center gap-5">
+                  <div className="w-16 h-4 rounded-full bg-white/10 mb-1" />
+                  
+                  <div className="w-14 h-14 rounded-2xl bg-accent-soft text-accent flex items-center justify-center">
+                    <Logo />
+                  </div>
+
+                  <div>
+                    <p className="font-display font-extrabold text-xl text-white">NAR El Salvador</p>
+                    <p className="text-xs text-muted mt-1">Carpooling interurbano seguro</p>
+                  </div>
+
+                  <div className="p-3 bg-white rounded-2xl shadow-xl flex flex-col items-center justify-center">
+                    <QRCodeSVG
+                      value="https://nar.sv/#descargar-app"
+                      size={125}
+                      level="M"
+                      includeMargin={false}
+                    />
+                  </div>
+
+                  <p className="text-[11px] text-muted max-w-[220px]">
+                    Escanea este código QR con la cámara de tu teléfono móvil para acceder al registro de la beta.
+                  </p>
+
+                  <div className="w-full pt-3 border-t border-line flex items-center justify-between text-[11px] text-subtle">
+                    <span>iOS & Android</span>
+                    <span className="text-accent font-bold">El Salvador 🇸🇻</span>
+                  </div>
+                </div>
+              </div>
+            </Reveal>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+};
+
+/* ── Manifiesto: texto que se revela con el scroll ───────────────────────── */
+
+const Manifesto: React.FC = () => (
+  <section aria-label="Por qué NAR" className="section border-t border-line">
+    <div className="container-nar max-w-[980px]">
+      <Eyebrow>Por qué NAR</Eyebrow>
+      <Decor
+        fallback={
+          <p className="t-h3 mt-6">
+            Si ya vas por la ruta, los asientos vacíos pueden llevar a alguien más. Mismo trayecto, gasolina compartida y
+            perfiles que puedes revisar antes de subir.
+          </p>
+        }
+      >
+        <ScrollReveal
+          enableBlur
+          baseOpacity={0.12}
+          baseRotation={2}
+          blurStrength={6}
+          containerClassName="mt-6"
+          textClassName="t-h3 !leading-[1.25]"
+        >
+          Si ya vas por la ruta, los asientos vacíos pueden llevar a alguien más. Mismo trayecto, gasolina compartida y
+          perfiles que puedes revisar antes de subir.
+        </ScrollReveal>
+      </Decor>
+    </div>
+  </section>
+);
+
+/* ── Para quién: pasajeros y conductores ────────────────────────────────── */
+
+const AudienceSection: React.FC<{ onOpenAuth: () => void }> = ({ onOpenAuth }) => {
   const tabs = [
     {
       id: 'pasajeros',
       icon: Users,
       title: 'Para pasajeros',
-      text: 'Viaja sentado en un asiento reservado hacia tu trabajo o universidad, con hora de salida y punto de subida acordados antes de salir.',
+      text: 'Viaja cómodo en un asiento reservado hacia tu trabajo o universidad, con horario de salida y punto de subida acordados antes de salir.',
       points: [
-        'Ves el aporte por asiento antes de reservar',
-        'Eliges en qué parada subes',
-        'Recibes un pase digital con PIN',
-        'Puedes escribir al conductor antes de salir',
+        'Ves el aporte estimado por asiento en USD',
+        'Puntos de encuentro seguros en centros comerciales y gasolineras',
+        'Pase digital verificado con PIN al abordar',
+        'Identidad del conductor con DUI antes de subir',
       ],
-      cta: { label: 'Buscar un viaje', action: onSearch },
+      cta: { label: 'Crear cuenta de pasajero', action: onOpenAuth },
     },
     {
       id: 'conductores',
       icon: Car,
       title: 'Para conductores',
-      text: 'Si ya haces el trayecto, publica tus asientos libres y divide la gasolina con personas que van por tu misma ruta.',
+      text: 'Si ya haces el trayecto en tu vehículo, comparte tus asientos libres y amortiza tus gastos de gasolina con personas verificadas.',
       points: [
-        'Defines salida, parada intermedia y llegada',
-        'Eliges cuántos asientos ofreces (1 a 4)',
-        'Fijas el aporte por asiento en USD',
-        'Confirmas a cada pasajero con su PIN al abordar',
+        'Tú defines tus rutas habituales y tus horas de salida',
+        'Eliges cuántos asientos libres ofreces en tu auto',
+        'Aporte justo por asiento para compartir el combustible',
+        'Comunidad confiable: todos los usuarios presentan DUI',
       ],
-      cta: { label: 'Crear perfil de conductor', action: onOpenPublish },
+      cta: { label: 'Registrarme como conductor', action: onOpenAuth },
     },
     {
       id: 'rutina',
       icon: Briefcase,
-      title: 'Para la ruta de cada día',
-      text: 'Muchos viajes se repiten: de lunes a viernes, o ciertos días de la semana. Lo verás indicado en cada salida.',
+      title: 'Para la rutina diaria',
+      text: 'Ideal para quienes viajan de lunes a viernes en los corredores de mayor tráfico de El Salvador.',
       points: [
-        'Salidas recurrentes marcadas en cada tarjeta',
-        'Mismo conductor y mismo punto de encuentro',
-        'Filtro por mañana o tarde',
-        'Búsqueda de hoy, mañana o cualquier día',
+        'Rutas habituales entre Santa Tecla, San Salvador y Santa Ana',
+        'Mismo grupo de confianza para viajar cada día',
+        'Menos estrés, menos tráfico y menos gasto mensual',
+        'Viaja sentado y con aire acondicionado',
       ],
-      cta: { label: 'Ver salidas recurrentes', action: onSearch },
+      cta: { label: 'Unirme a la comunidad', action: onOpenAuth },
     },
   ];
   const [active, setActive] = useState(tabs[0].id);
@@ -488,7 +524,7 @@ const AudienceSection: React.FC<{ onSearch: () => void; onOpenPublish: () => voi
     <section aria-labelledby="para-quien-title" className="section border-t border-line">
       <div className="container-nar">
         <Reveal>
-          <SectionHeader id="para-quien-title" eyebrow="Para quién" title="Una ruta compartida," muted="hecha a tu medida." />
+          <SectionHeader id="para-quien-title" eyebrow="Comunidad NAR" title="Una alternativa real," muted="para moverte por El Salvador." />
         </Reveal>
 
         <Reveal className="mt-12 md:mt-16">
@@ -524,8 +560,9 @@ const AudienceSection: React.FC<{ onSearch: () => void; onOpenPublish: () => voi
             </div>
 
             <div
-              role="tabpanel"
+              tabIndex={0}
               id={`panel-${current.id}`}
+              role="tabpanel"
               aria-labelledby={`tab-${current.id}`}
               className="relative min-h-[420px] rounded-[12px] overflow-hidden border border-line bg-[#0b0b0d]"
             >
@@ -564,7 +601,7 @@ const AudienceSection: React.FC<{ onSearch: () => void; onOpenPublish: () => voi
                     </CardSwap>
                   </div>
                 </Decor>
-                {/* Versión estática y accesible (móvil y lectores de pantalla) */}
+
                 <div className="sm:sr-only w-full rounded-[12px] border border-line-strong bg-surface/95 backdrop-blur p-6">
                   <p className="t-tag text-accent">{current.title}</p>
                   <ul className="mt-5 flex flex-col gap-3">
@@ -588,81 +625,25 @@ const AudienceSection: React.FC<{ onSearch: () => void; onOpenPublish: () => voi
   );
 };
 
-/* ── Manifiesto: texto que se revela con el scroll ───────────────────────── */
+/* ── Cómo funciona la App ────────────────────────────────────────────────── */
 
-const Manifesto: React.FC = () => (
-  <section aria-label="Por qué NAR" className="section border-t border-line">
-    <div className="container-nar max-w-[980px]">
-      <Eyebrow>Por qué NAR</Eyebrow>
-      <Decor
-        fallback={
-          <p className="t-h3 mt-6">
-            Si ya vas por la ruta, los asientos vacíos pueden llevar a alguien más. Mismo trayecto, gasolina compartida y
-            perfiles que puedes revisar antes de subir.
-          </p>
-        }
-      >
-        <ScrollReveal
-          enableBlur
-          baseOpacity={0.12}
-          baseRotation={2}
-          blurStrength={6}
-          containerClassName="mt-6"
-          textClassName="t-h3 !leading-[1.25]"
-        >
-          Si ya vas por la ruta, los asientos vacíos pueden llevar a alguien más. Mismo trayecto, gasolina compartida y
-          perfiles que puedes revisar antes de subir.
-        </ScrollReveal>
-      </Decor>
-    </div>
-  </section>
-);
-
-/* ── Banda de corredores en movimiento ──────────────────────────────────── */
-
-const CorridorBand: React.FC<{ corridors: Corridor[] }> = ({ corridors }) => {
-  const names = corridors.map((c) => `${c.origin} → ${c.destination}`);
-  if (!names.length) return null;
-  return (
-    <section aria-label="Corredores con salidas" className="py-10 md:py-14 border-t border-line overflow-hidden">
-      <p className="sr-only">{names.join(', ')}</p>
-      <div aria-hidden="true">
-        <Decor>
-          <ScrollVelocity
-            texts={[names.join('   ·   '), [...names].reverse().join('   ·   ')]}
-            velocity={40}
-            fontSize="clamp(32px, 6vw, 72px)"
-            fontWeight={400}
-            color="#ffffff"
-            outlineAlternate
-            fadeEdges
-            gap={48}
-          />
-        </Decor>
-      </div>
-    </section>
-  );
-};
-
-/* ── Cómo funciona ──────────────────────────────────────────────────────── */
-
-const HowItWorks: React.FC = () => {
+const HowItWorks: React.FC<{ onOpenAuth: () => void }> = () => {
   const steps = [
-    { n: 'Paso 1', title: 'Busca tu ruta', text: 'Indica origen, destino, día y cuántas personas viajan.', Icon: Search },
-    { n: 'Paso 2', title: 'Reserva tu asiento', text: 'Revisa paradas, conductor y vehículo. Elige dónde subes y confirma.', Icon: QrCode },
-    { n: 'Paso 3', title: 'Muestra tu PIN', text: 'Al abordar, el conductor confirma tu pase. El aporte se acuerda en USD.', Icon: ShieldCheck },
+    { n: 'Paso 1', title: 'Descarga la App y regístrate', text: 'Crea tu cuenta en minutos verificando tu DUI y número telefónico de El Salvador.', Icon: Smartphone },
+    { n: 'Paso 2', title: 'Encuentra o comparte tu ruta', text: 'Busca las salidas que coinciden con tu camino o publica los asientos libres de tu vehículo.', Icon: Navigation },
+    { n: 'Paso 3', title: 'Viaja seguro y divide gastos', text: 'Seguimiento por GPS, pase digital de abordaje con código QR y aporte justo en USD.', Icon: ShieldCheck },
   ];
   return (
     <section id="como-funciona" aria-labelledby="como-title" className="section border-t border-line">
       <div className="container-nar">
         <Reveal>
-          <SectionHeader id="como-title" align="center" eyebrow="Cómo funciona" title="De la búsqueda al asiento" muted="en tres pasos." />
+          <SectionHeader id="como-title" align="center" eyebrow="Cómo funciona" title="La movilidad compartida" muted="en tres sencillos pasos." />
         </Reveal>
         <ol className="mt-12 md:mt-16 grid gap-4 md:grid-cols-3 md:items-start max-w-[1040px] mx-auto">
           {steps.map((s, i) => (
             <Reveal as="li" key={s.n} delay={i * 90} className={cx(i === 1 && 'md:mt-12', i === 2 && 'md:mt-24')}>
               <SpotlightCard {...SPOT} className="rounded-[16px] p-6 min-h-[260px] flex flex-col">
-                <p className="text-[16px] text-accent">{s.n}</p>
+                <p className="text-[16px] text-accent font-mono font-bold">{s.n}</p>
                 <div className="flex-1 flex items-center justify-center py-8" aria-hidden="true">
                   <div className="w-14 h-14 rounded-[14px] surface-inset flex items-center justify-center">
                     <s.Icon className="w-6 h-6 text-fg" strokeWidth={1.5} />
@@ -679,22 +660,22 @@ const HowItWorks: React.FC = () => {
   );
 };
 
-/* ── Seguridad: rejilla de funciones + tarjeta alta ─────────────────────── */
+/* ── Seguridad: Confianza antes de subir ─────────────────────────────────── */
 
-const SafetySection: React.FC<{ onBrowseAll: () => void }> = ({ onBrowseAll }) => {
+const SafetySection: React.FC<{ onOpenAuth: () => void }> = ({ onOpenAuth }) => {
   const items = [
-    { Icon: ShieldCheck, title: 'Perfiles con DUI', text: 'Cada perfil muestra si su Documento Único de Identidad está verificado.' },
-    { Icon: Phone, title: 'Teléfono +503', text: 'Conductores con número salvadoreño verificado para coordinar la subida.' },
-    { Icon: Car, title: 'Vehículo y placa', text: 'Marca, modelo, color y placa visibles antes de reservar.' },
-    { Icon: MapPin, title: 'Puntos públicos', text: 'Subidas en centros comerciales, gasolineras, pasarelas y bahías conocidas.' },
-    { Icon: MessageSquare, title: 'Chat del viaje', text: 'Escribe al conductor para confirmar el punto exacto de encuentro.' },
-    { Icon: Share2, title: 'Comparte tu viaje', text: 'Envía ruta, conductor y placa a un familiar desde “Mi viaje”.' },
+    { Icon: ShieldCheck, title: 'Perfiles con DUI', text: 'Todos los miembros de la comunidad validan su Documento Único de Identidad salvadoreño.' },
+    { Icon: Phone, title: 'Teléfono +503 verificado', text: 'Número local verificado por SMS para coordinar la recogida con total puntualidad.' },
+    { Icon: Car, title: 'Vehículo y placas registrados', text: 'Marca, modelo, color y placa registrados en la plataforma antes de salir.' },
+    { Icon: MapPin, title: 'Puntos de encuentro públicos', text: 'Subidas acordadas en centros comerciales, gasolineras reconocidas y bahías iluminadas.' },
+    { Icon: MessageSquare, title: 'Chat interno en la App', text: 'Comunícate con el conductor o pasajeros sin compartir tu número personal.' },
+    { Icon: Share2, title: 'Monitoreo en tiempo real', text: 'Comparte el trayecto en vivo y los datos del carro con un familiar por WhatsApp.' },
   ];
   return (
     <section id="seguridad" aria-labelledby="seguridad-title" className="section border-t border-line">
       <div className="container-nar">
         <Reveal>
-          <SectionHeader id="seguridad-title" eyebrow="Seguridad" title="Sabes con quién viajas" muted="antes de subir." />
+          <SectionHeader id="seguridad-title" eyebrow="Seguridad y Confianza" title="Sabes con quién viajas" muted="antes de subir al carro." />
         </Reveal>
         <div className="mt-12 md:mt-16 grid gap-4 lg:grid-cols-[2fr_1fr]">
           <div className="grid gap-4 sm:grid-cols-2">
@@ -720,15 +701,15 @@ const SafetySection: React.FC<{ onBrowseAll: () => void }> = ({ onBrowseAll }) =
               <div className="absolute inset-0 bg-gradient-to-t from-surface from-30% via-surface/40 via-50% to-transparent" />
               <div className="relative p-6 sm:p-8 flex flex-col gap-5">
                 <h3 className="t-h3">
-                  En caso de emergencia,
+                  Seguridad 24/7
                   <br />
-                  <span className="text-muted">911 a un toque.</span>
+                  <span className="text-muted">en cada trayecto.</span>
                 </h3>
                 <p className="t-body text-muted">
-                  Desde “Mi viaje” tienes a mano los datos del vehículo y del conductor y un acceso directo para llamar al 911.
+                  En la aplicación móvil cuentas con acceso rápido a botón de emergencia y datos completos de la cabina.
                 </p>
                 <div>
-                  <Button onClick={onBrowseAll}>Buscar un viaje</Button>
+                  <Button onClick={onOpenAuth}>Crear mi cuenta segura</Button>
                 </div>
               </div>
             </article>
@@ -739,144 +720,100 @@ const SafetySection: React.FC<{ onBrowseAll: () => void }> = ({ onBrowseAll }) =
   );
 };
 
-/* ── Corredores (patrón de tarjetas de precio) ─────────────────────────── */
+/* ── Corredores (Información de Cobertura) ───────────────────────────────── */
 
 export const CorridorCards: React.FC<{ corridors: Corridor[]; onSelectCorridor: (o: string, d: string) => void }> = ({
   corridors,
   onSelectCorridor,
 }) => (
   <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-    {corridors.map((c, i) => {
-      const live = c.rides.some((r) => r.status === 'in_progress');
-      const free = c.rides.reduce((n, r) => n + Math.max(0, r.availableSeats), 0);
-      return (
-        <Reveal as="li" key={c.key} delay={i * 60}>
-          <SpotlightCard {...SPOT} className={cx('rounded-[16px] p-6 h-full flex flex-col', live && 'ring-1 ring-accent/35')}>
-            <div className="flex items-center justify-between gap-2 min-h-6">
-              <p className="text-[14px] text-muted">{c.origin}</p>
-              {live ? <Badge tone="accent">En ruta ahora</Badge> : null}
-            </div>
-            <h3 className="t-h4 mt-2">{c.destination}</h3>
-            <p className="mt-6 flex items-baseline gap-2">
-              <span className="text-[44px] leading-none tracking-[-0.04em] tabular">{usd(c.minPrice)}</span>
-              <span className="t-small text-muted">/ asiento</span>
-            </p>
-            <p className="t-small text-muted mt-3 min-h-[42px]">{c.via ? `Pasa por ${c.via}` : 'Ruta directa'}</p>
-            <Button
-              variant={live ? 'primary' : 'outline'}
-              block
-              className="mt-6"
-              onClick={() => onSelectCorridor(c.origin, c.destination)}
-            >
-              Ver salidas
-            </Button>
-            <ul className="mt-6 pt-6 border-t border-line flex flex-col gap-3 t-body">
-              <li className="flex justify-between gap-3">
-                <span className="text-muted">Duración</span>
-                <span className="tabular">{c.duration}</span>
-              </li>
-              {c.distanceKm > 0 ? (
-                <li className="flex justify-between gap-3">
-                  <span className="text-muted">Distancia</span>
-                  <span className="tabular">{c.distanceKm} km</span>
-                </li>
-              ) : null}
-              <li className="flex justify-between gap-3">
-                <span className="text-muted">Salidas</span>
-                <span className="tabular">{c.rides.length}</span>
-              </li>
-              <li className="flex justify-between gap-3">
-                <span className="text-muted">Asientos libres</span>
-                <span className="tabular">{free}</span>
-              </li>
-            </ul>
-          </SpotlightCard>
-        </Reveal>
-      );
-    })}
+    {corridors.map((c, i) => (
+      <Reveal as="li" key={c.key} delay={i * 60}>
+        <SpotlightCard {...SPOT} className="rounded-[16px] p-6 h-full flex flex-col">
+          <p className="text-[14px] text-muted">{c.origin}</p>
+          <h3 className="t-h4 mt-2">{c.destination}</h3>
+          <p className="mt-6 flex items-baseline gap-2">
+            <span className="text-[40px] font-bold leading-none tracking-tight tabular">{usd(c.minPrice)}</span>
+            <span className="t-small text-muted">/ aporte aprox.</span>
+          </p>
+          <p className="t-small text-muted mt-3 min-h-[42px]">{c.via ? `Pasa por ${c.via}` : 'Ruta directa en carretera'}</p>
+          <Button
+            variant="outline"
+            block
+            className="mt-6"
+            onClick={() => onSelectCorridor(c.origin, c.destination)}
+          >
+            Ver paradas habituales
+          </Button>
+        </SpotlightCard>
+      </Reveal>
+    ))}
   </ul>
 );
 
-const CorridorsSection: React.FC<{ corridors: Corridor[]; onSelectCorridor: (o: string, d: string) => void }> = ({
-  corridors,
-  onSelectCorridor,
-}) => {
-  const prices = corridors.map((c) => c.minPrice);
-  const min = Math.min(...prices);
-  const max = Math.max(...prices);
+const CorridorsSection: React.FC<{
+  corridors: Corridor[];
+  onSelectCorridor: (o: string, d: string) => void;
+  onOpenAuth: () => void;
+}> = ({ corridors, onSelectCorridor }) => (
+  <section id="corredores" aria-labelledby="corredores-title" className="section border-t border-line">
+    <div className="container-nar">
+      <Reveal>
+        <SectionHeader
+          id="corredores-title"
+          eyebrow="Red de Cobertura"
+          title="Los corredores más transitados"
+          muted="de El Salvador."
+        />
+      </Reveal>
+      <div className="mt-12 md:mt-16">
+        <CorridorCards corridors={corridors} onSelectCorridor={onSelectCorridor} />
+      </div>
+    </div>
+  </section>
+);
+
+/* ── Banda de corredores en movimiento ──────────────────────────────────── */
+
+const CorridorBand: React.FC<{ corridors: Corridor[] }> = ({ corridors }) => {
+  const names = corridors.map((c) => `${c.origin} → ${c.destination}`);
+  if (!names.length) return null;
   return (
-    <section id="corredores" aria-labelledby="corredores-title" className="section border-t border-line">
-      <div className="container-nar">
-        <Reveal>
-          <SectionHeader
-            id="corredores-title"
-            align="center"
-            eyebrow="Corredores"
-            title="Aporte fijo por asiento,"
-            muted="conocido antes de reservar."
-            description={
-              Number.isFinite(min)
-                ? `En las salidas publicadas el aporte va de ${usd(min)} a ${usd(max)} USD según la distancia del corredor.`
-                : undefined
-            }
+    <section aria-label="Corredores conectados" className="py-10 md:py-14 border-t border-line overflow-hidden">
+      <p className="sr-only">{names.join(', ')}</p>
+      <div aria-hidden="true">
+        <Decor>
+          <ScrollVelocity
+            texts={[names.join('   ·   '), [...names].reverse().join('   ·   ')]}
+            velocity={36}
+            fontSize="clamp(32px, 6vw, 72px)"
+            fontWeight={400}
+            color="#ffffff"
+            outlineAlternate
+            fadeEdges
+            gap={48}
           />
-        </Reveal>
-        <div className="mt-12 md:mt-16">
-          <CorridorCards corridors={corridors} onSelectCorridor={onSelectCorridor} />
-        </div>
-        <StatsRow corridors={corridors} />
+        </Decor>
       </div>
     </section>
   );
 };
 
-/* ── Cifras en vivo, calculadas con los viajes publicados ───────────────── */
-
-const StatsRow: React.FC<{ corridors: Corridor[] }> = ({ corridors }) => {
-  const rides = corridors.flatMap((c) => c.rides);
-  const seats = rides.reduce((n, r) => n + Math.max(0, r.availableSeats), 0);
-  const minPrice = Math.min(...corridors.map((c) => c.minPrice));
-  const stats = [
-    { value: rides.length, label: 'Salidas publicadas', decimals: 0, prefix: '' },
-    { value: seats, label: 'Asientos libres ahora', decimals: 0, prefix: '' },
-    { value: corridors.length, label: 'Corredores activos', decimals: 0, prefix: '' },
-    { value: Number.isFinite(minPrice) ? minPrice : 0, label: 'Aporte más bajo por asiento', decimals: 2, prefix: '$' },
-  ];
-  return (
-    <dl className="mt-16 grid grid-cols-2 lg:grid-cols-4 border-y border-line">
-      {stats.map((s, i) => (
-        <div
-          key={s.label}
-          className={cx(
-            'py-8 px-4 flex flex-col items-center text-center gap-2',
-            i % 2 === 1 && 'border-l border-line',
-            i >= 2 && 'border-t lg:border-t-0 border-line',
-            i === 2 && 'lg:border-l'
-          )}
-        >
-          <dt className="t-small text-muted order-2">{s.label}</dt>
-          <dd className="text-[40px] md:text-[48px] leading-none tracking-[-0.04em] tabular order-1 text-brand">
-            <CountUp to={s.value} decimals={s.decimals} prefix={s.prefix} duration={1.4} trigger="view" />
-          </dd>
-        </div>
-      ))}
-    </dl>
-  );
-};
-
-/* ── FAQ ────────────────────────────────────────────────────────────────── */
+/* ── FAQ Informativo ────────────────────────────────────────────────────── */
 
 const FaqSection: React.FC = () => {
   const half = Math.ceil(FAQ_ITEMS.length / 2);
+  const left = FAQ_ITEMS.slice(0, half);
+  const right = FAQ_ITEMS.slice(half);
   return (
     <section id="faq" aria-labelledby="faq-title" className="section border-t border-line">
       <div className="container-nar">
         <Reveal>
-          <SectionHeader id="faq-title" eyebrow="Preguntas frecuentes" title="Tienes preguntas." muted="Aquí las respuestas." />
+          <SectionHeader id="faq-title" eyebrow="Preguntas frecuentes" title="Todo lo que necesitas saber" muted="sobre NAR." />
         </Reveal>
-        <div className="mt-12 md:mt-16 grid gap-4 md:grid-cols-2 md:items-start">
-          {[FAQ_ITEMS.slice(0, half), FAQ_ITEMS.slice(half)].map((col, ci) => (
-            <div key={ci} className="flex flex-col gap-4">
+        <div className="mt-12 md:mt-16 grid gap-6 md:grid-cols-2 md:items-start max-w-[1040px]">
+          {[left, right].map((col, idx) => (
+            <div key={idx} className="flex flex-col gap-3">
               {col.map((f) => (
                 <AccordionItem key={f.q} question={f.q}>
                   {f.a}
@@ -890,10 +827,10 @@ const FaqSection: React.FC = () => {
   );
 };
 
-/* ── CTA final ──────────────────────────────────────────────────────────── */
+/* ── CTA Final de Descarga y Captación ───────────────────────────────────── */
 
-const ClosingCta: React.FC<{ onBrowseAll: () => void; onOpenPublish: () => void }> = ({ onBrowseAll, onOpenPublish }) => (
-  <section aria-labelledby="cta-title" className="pb-24 md:pb-32">
+const ClosingCta: React.FC<{ onOpenAuth: () => void }> = ({ onOpenAuth }) => (
+  <section aria-labelledby="cta-title" className="pb-24 md:pb-32 border-t border-line pt-20">
     <div className="container-nar">
       <Reveal>
         <div className="card relative overflow-hidden">
@@ -902,26 +839,34 @@ const ClosingCta: React.FC<{ onBrowseAll: () => void; onOpenPublish: () => void 
             <div className="absolute inset-0 bg-gradient-to-r from-surface via-surface/40 to-transparent" />
           </div>
           <div className="relative px-6 py-14 sm:px-10 md:px-14 md:py-20 max-w-[760px]">
-            <Eyebrow>Empieza hoy</Eyebrow>
+            <Eyebrow>El futuro de la movilidad en El Salvador</Eyebrow>
             <h2 id="cta-title" className="t-h2 mt-4">
-              Alguien ya va por tu ruta.
+              Alguien ya va por tu misma ruta.
               <br />
               <GradientText colors={BRAND} animationSpeed={5} className="!inline-flex">
                 Comparte el viaje.
               </GradientText>
             </h2>
-            <p className="t-body text-muted mt-5 max-w-[440px]">
-              Busca un asiento para tu próximo trayecto o publica los que te sobran en el carro.
+            <p className="t-body text-muted mt-5 max-w-[460px]">
+              Únete a la lista oficial de lanzamiento de NAR. Crea tu perfil en la web para obtener beneficios de lanzamiento y aviso directo cuando la app esté disponible.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
               <Magnet padding={60} magnetStrength={4} maxOffset={10}>
-                <Button size="lg" onClick={onBrowseAll}>
-                  Buscar viaje
-                </Button>
+                <a
+                  href="#descargar-app"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    document.getElementById('descargar-app')?.scrollIntoView({ behavior: 'smooth' });
+                  }}
+                  className="btn btn-primary h-12 px-7 rounded-xl font-bold flex items-center gap-2 cursor-pointer"
+                >
+                  <Smartphone className="w-4 h-4" />
+                  <span>Conocer la App</span>
+                </a>
               </Magnet>
               <Magnet padding={60} magnetStrength={4} maxOffset={10}>
-                <Button size="lg" variant="outline" onClick={onOpenPublish}>
-                  Crear cuenta / Ingresar
+                <Button size="lg" variant="outline" onClick={onOpenAuth}>
+                  Crear mi Perfil / Ingresar
                 </Button>
               </Magnet>
             </div>

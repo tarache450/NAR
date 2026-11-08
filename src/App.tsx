@@ -138,19 +138,8 @@ export function App() {
           rides={rides}
           corridors={corridors}
           places={places}
-          query={query}
-          onQueryChange={setQuery}
-          onSelectRide={(r) => setSelectedRideId(r.id)}
-          onSearch={(q) => {
-            setQuery(q);
-            navigate('search');
-          }}
+          onOpenAuth={() => setAuthOpen(true)}
           onSelectCorridor={searchCorridor}
-          onOpenPublish={() => setAuthOpen(true)}
-          onBrowseAll={() => navigate('search')}
-          activeBooking={null}
-          onOpenPass={() => {}}
-          onTrackBooking={() => {}}
         />
       );
       break;
