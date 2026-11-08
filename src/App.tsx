@@ -375,6 +375,7 @@ export function App() {
               setSelectedRideId(null);
               setChatRideId(r.id);
             }}
+            onOpenAuth={() => setAuthOpen(true)}
           />
         ) : null}
         {publishOpen ? (

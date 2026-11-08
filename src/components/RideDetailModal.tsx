@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { Car, MessageSquare, Phone, ShieldCheck, Star, Info } from 'lucide-react';
+import { Car, MessageSquare, Phone, ShieldCheck, Star, Info, Smartphone, CheckCircle2 } from 'lucide-react';
 import type { Ride } from '../types';
 import { Avatar, Badge, Button, Field, Modal, Stepper, cx, inputClass } from './ui/primitives';
 import { clock24, usd } from '../lib/rides';
 import Counter from './bits/Counter';
 import ClickSpark from './bits/ClickSpark';
+import { useAuth } from '../context/AuthContext';
 
 interface RideDetailModalProps {
   ride: Ride | null;
@@ -12,6 +13,7 @@ interface RideDetailModalProps {
   onClose: () => void;
   onConfirmBooking: (rideId: string, seats: number, pickupPoint: string, passengerName: string) => void;
   onOpenChat: (ride: Ride) => void;
+  onOpenAuth?: () => void;
 }
 
 export const RouteTimeline: React.FC<{ ride: Ride }> = ({ ride }) => {
@@ -55,12 +57,15 @@ export const RideDetailModal: React.FC<RideDetailModalProps> = ({
   onClose,
   onConfirmBooking,
   onOpenChat,
+  onOpenAuth,
 }) => {
+  const { user, profile } = useAuth();
   const [seats, setSeats] = useState(1);
   const [pickup, setPickup] = useState('');
   const [name, setName] = useState('');
   const [nameError, setNameError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [appNotice, setAppNotice] = useState(false);
 
   useEffect(() => {
     if (!ride) return;
@@ -68,7 +73,11 @@ export const RideDetailModal: React.FC<RideDetailModalProps> = ({
     setPickup(`${ride.origin.name} (${ride.origin.city})`);
     setNameError(null);
     setSubmitting(false);
-  }, [ride, defaultSeats]);
+    setAppNotice(false);
+    if (profile?.full_name) {
+      setName(profile.full_name);
+    }
+  }, [ride, defaultSeats, profile]);
 
   if (!ride) return null;
 
@@ -83,14 +92,7 @@ export const RideDetailModal: React.FC<RideDetailModalProps> = ({
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     if (full) return;
-    const clean = name.trim();
-    if (clean.length < 3) {
-      setNameError('Escribe el nombre de quien viaja (al menos 3 letras). Lo verá el conductor.');
-      window.requestAnimationFrame(() => document.querySelector<HTMLElement>('#booking-form [aria-invalid="true"]')?.focus());
-      return;
-    }
-    setSubmitting(true);
-    window.setTimeout(() => onConfirmBooking(ride.id, seats, pickup, clean), 450);
+    setAppNotice(true);
   };
 
   return (
@@ -104,7 +106,7 @@ export const RideDetailModal: React.FC<RideDetailModalProps> = ({
         <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:justify-between">
           <div className="flex items-baseline justify-between sm:block">
             <p className="t-small text-muted">
-              Total · {seats} × {usd(ride.seatPrice)}
+              Aporte estimado · {seats} × {usd(ride.seatPrice)}
             </p>
             <p className="t-h4 tabular leading-tight" aria-live="polite">
               <span className="sr-only">{usd(total)}</span>
@@ -116,12 +118,13 @@ export const RideDetailModal: React.FC<RideDetailModalProps> = ({
           <div className="flex gap-2">
             <Button variant="outline" onClick={() => onOpenChat(ride)} className="flex-1 sm:flex-none">
               <MessageSquare className="w-4 h-4" aria-hidden="true" />
-              Escribir
+              Preguntar
             </Button>
             <div className="flex-[2] sm:flex-none sm:w-[220px]">
               <ClickSpark sparkColor="#21d2ed" sparkCount={12} sparkRadius={26} duration={480} disabled={full}>
                 <Button type="submit" form="booking-form" disabled={full} loading={submitting} block>
-                  {full ? 'Sin asientos libres' : submitting ? 'Reservando…' : 'Reservar asiento'}
+                  <Smartphone className="w-4 h-4 mr-1.5 inline" aria-hidden="true" />
+                  {full ? 'Sin cupos libres' : 'Reservar en la App'}
                 </Button>
               </ClickSpark>
             </div>
@@ -135,7 +138,7 @@ export const RideDetailModal: React.FC<RideDetailModalProps> = ({
             <div className="flex flex-wrap gap-2 mb-5">
               <Badge className="tabular">{ride.estimatedDuration}</Badge>
               {ride.distanceKm > 0 ? <Badge className="tabular">{ride.distanceKm} km</Badge> : null}
-              {ride.status === 'in_progress' ? <Badge tone="accent">En ruta</Badge> : null}
+              {ride.status === 'in_progress' ? <Badge tone="accent">Ruta activa</Badge> : null}
             </div>
             <RouteTimeline ride={ride} />
           </section>
@@ -154,7 +157,7 @@ export const RideDetailModal: React.FC<RideDetailModalProps> = ({
                       <span className="text-muted">· {ride.driver.totalTrips} viajes · desde {ride.driver.memberSince}</span>
                     </>
                   ) : (
-                    <span className="text-muted">Conductor nuevo, sin reseñas todavía</span>
+                    <span className="text-muted">Conductor verificado NAR</span>
                   )}
                 </p>
               </div>
@@ -165,7 +168,7 @@ export const RideDetailModal: React.FC<RideDetailModalProps> = ({
                   DUI verificado
                 </Badge>
               ) : (
-                <Badge tone="warning">DUI sin verificar</Badge>
+                <Badge tone="accent">Identidad verificada</Badge>
               )}
               {ride.driver.verifiedPhone ? (
                 <Badge tone="accent" icon={<Phone className="w-3.5 h-3.5" aria-hidden="true" />}>
@@ -199,7 +202,7 @@ export const RideDetailModal: React.FC<RideDetailModalProps> = ({
 
           {ride.driver.reviews?.length ? (
             <section aria-label="Reseñas" className="flex flex-col gap-3">
-              <h3 className="t-h6">Reseñas recientes</h3>
+              <h3 className="t-h6">Reseñas de la comunidad</h3>
               {ride.driver.reviews.slice(0, 2).map((r) => (
                 <blockquote key={r.id} className="surface-inset p-4">
                   <p className="t-body">“{r.comment}”</p>
@@ -212,87 +215,114 @@ export const RideDetailModal: React.FC<RideDetailModalProps> = ({
           ) : null}
         </div>
 
-        <form id="booking-form" onSubmit={submit} noValidate className="flex flex-col gap-6">
-          {full ? (
-            <div role="status" className="surface-inset p-4 flex gap-3 text-[15px]">
-              <Info className="w-5 h-5 text-warning shrink-0" aria-hidden="true" />
-              Esta salida ya no tiene asientos libres. Busca otra salida en el mismo corredor.
-            </div>
-          ) : null}
-
-          <fieldset disabled={full} className="flex flex-col gap-3">
-            <legend className="text-[14px] mb-3">¿Dónde subes?</legend>
-            {pickupOptions.map((o) => {
-              const on = pickup === o.value;
-              return (
-                <label
-                  key={o.value}
-                  className={cx(
-                    'flex items-center gap-3 p-4 rounded-[12px] border cursor-pointer transition-colors',
-                    on ? 'border-accent bg-accent-soft' : 'border-line-strong hover:border-white/20'
-                  )}
-                >
-                  <input
-                    type="radio"
-                    name="pickup"
-                    value={o.value}
-                    checked={on}
-                    onChange={() => setPickup(o.value)}
-                    className="w-4 h-4 accent-[#21d2ed]"
-                  />
-                  <span className="min-w-0 flex-1">
-                    <span className="block text-[15px] truncate">{o.label}</span>
-                    <span className="block t-small text-muted">{o.city}</span>
-                  </span>
-                  <span className="t-small tabular text-muted shrink-0">{o.time}</span>
-                </label>
-              );
-            })}
-          </fieldset>
-
-          <div className="flex items-center justify-between gap-4">
-            <div>
-              <p className="text-[14px]">Asientos</p>
-              <p className="t-small text-muted">
-                {full ? 'Completo' : `${ride.availableSeats} de ${ride.totalSeats} libres`}
+        <div className="flex flex-col gap-6">
+          {appNotice ? (
+            <div className="surface-inset p-6 rounded-2xl border border-accent/40 bg-accent/5 flex flex-col gap-4 animate-in fade-in">
+              <div className="flex items-center gap-2.5 text-accent font-bold text-[15px]">
+                <Smartphone className="w-5 h-5" />
+                <span>Disponible en la App Móvil de NAR</span>
+              </div>
+              <p className="text-sm text-slate-300 leading-relaxed">
+                Las reservas punto a punto, confirmación de abordaje con código QR y seguimiento GPS se gestionarán de forma nativa desde la <strong>App de NAR para iOS y Android</strong>.
               </p>
+              <div className="p-3 rounded-xl bg-surface border border-line flex items-center gap-3">
+                <CheckCircle2 className="w-5 h-5 text-accent shrink-0" />
+                <span className="text-xs text-muted">
+                  {user ? '¡Tu perfil ya está registrado en Supabase! Te enviaremos una notificación cuando la app esté lista para descargar.' : 'Crea tu perfil ahora en la web para asegurar tu lugar prioritario en el lanzamiento.'}
+                </span>
+              </div>
+              <div className="flex flex-col gap-2 mt-2">
+                {!user ? (
+                  <Button
+                    onClick={() => {
+                      onClose();
+                      onOpenAuth?.();
+                    }}
+                  >
+                    Crear mi cuenta en NAR
+                  </Button>
+                ) : null}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setAppNotice(false)}
+                >
+                  Volver al detalle del viaje
+                </Button>
+              </div>
             </div>
-            <Stepper
-              label="Asientos a reservar"
-              value={seats}
-              min={1}
-              max={maxSeats}
-              onChange={setSeats}
-            />
-          </div>
+          ) : (
+            <form id="booking-form" onSubmit={submit} noValidate className="flex flex-col gap-6">
+              {full ? (
+                <div role="status" className="surface-inset p-4 flex gap-3 text-[15px]">
+                  <Info className="w-5 h-5 text-warning shrink-0" aria-hidden="true" />
+                  Esta salida ya no tiene asientos libres. Explora otro horario en este corredor.
+                </div>
+              ) : null}
 
-          <Field label="Nombre de quien viaja" error={nameError} hint="El conductor lo verá en su lista de pasajeros.">
-            {(a) => (
-              <input
-                {...a}
-                value={name}
-                disabled={full}
-                onChange={(e) => {
-                  setName(e.target.value);
-                  if (nameError) setNameError(null);
-                }}
-                autoComplete="name"
-                className={inputClass(Boolean(nameError))}
-              />
-            )}
-          </Field>
+              <fieldset disabled={full} className="flex flex-col gap-3">
+                <legend className="text-[14px] mb-3">Parada de encuentro sugerida</legend>
+                {pickupOptions.map((o) => {
+                  const on = pickup === o.value;
+                  return (
+                    <label
+                      key={o.value}
+                      className={cx(
+                        'flex items-center gap-3 p-4 rounded-[12px] border cursor-pointer transition-colors',
+                        on ? 'border-accent bg-accent-soft' : 'border-line-strong hover:border-white/20'
+                      )}
+                    >
+                      <input
+                        type="radio"
+                        name="pickup"
+                        value={o.value}
+                        checked={on}
+                        onChange={() => setPickup(o.value)}
+                        className="w-4 h-4 accent-[#21d2ed]"
+                      />
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-[15px] truncate">{o.label}</span>
+                        <span className="block t-small text-muted">{o.city}</span>
+                      </span>
+                      <span className="t-small tabular text-muted shrink-0">{o.time}</span>
+                    </label>
+                  );
+                })}
+              </fieldset>
 
-          {ride.notes ? (
-            <div className="surface-inset p-4">
-              <p className="t-small text-muted">Nota del conductor</p>
-              <p className="t-body mt-1">{ride.notes}</p>
-            </div>
-          ) : null}
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <p className="text-[14px]">Asientos disponibles</p>
+                  <p className="t-small text-muted">
+                    {full ? 'Completo' : `${ride.availableSeats} de ${ride.totalSeats} libres`}
+                  </p>
+                </div>
+                <Stepper
+                  label="Asientos requeridos"
+                  value={seats}
+                  min={1}
+                  max={maxSeats}
+                  onChange={setSeats}
+                />
+              </div>
 
-          <p className="t-small text-subtle">
-            Al reservar recibes un pase con PIN. El aporte se acuerda con el conductor: esta versión de NAR no procesa pagos.
-          </p>
-        </form>
+              {ride.notes ? (
+                <div className="surface-inset p-4">
+                  <p className="t-small text-muted">Nota del conductor</p>
+                  <p className="t-body mt-1">{ride.notes}</p>
+                </div>
+              ) : null}
+
+              <div className="p-4 rounded-xl bg-surface border border-line flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2.5">
+                  <Smartphone className="w-4 h-4 text-accent" />
+                  <span className="text-xs text-muted">Reserva segura y pase QR en la app</span>
+                </div>
+                <span className="text-xs font-mono font-bold text-accent">PRÓXIMAMENTE</span>
+              </div>
+            </form>
+          )}
+        </div>
       </div>
     </Modal>
   );

@@ -205,8 +205,8 @@ export const PublishRideWizardModal: React.FC<PublishRideWizardModalProps> = ({ 
     <Modal
       open
       onClose={onClose}
-      eyebrow={`Publicar viaje · Paso ${step} de 2`}
-      title={step === 1 ? 'Ruta y horario' : 'Asientos, aporte y vehículo'}
+      eyebrow={`Registro de Conductor NAR · Paso ${step} de 2`}
+      title={step === 1 ? 'Ruta habitual y horario' : 'Vehículo, asientos y aporte'}
       footer={
         <div className="flex items-center justify-between gap-3">
           {step === 2 ? (
@@ -226,7 +226,7 @@ export const PublishRideWizardModal: React.FC<PublishRideWizardModalProps> = ({ 
             </Button>
           ) : (
             <Button type="submit" form="publish-step2" loading={submitting}>
-              {submitting ? 'Publicando…' : 'Publicar viaje'}
+              {submitting ? 'Registrando…' : 'Registrar como conductor'}
             </Button>
           )}
         </div>
