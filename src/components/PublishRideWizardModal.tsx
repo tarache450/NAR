@@ -1,15 +1,17 @@
 import React, { useEffect, useState } from 'react';
-import { ArrowLeft, ArrowRight, Check } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Check, AlertCircle } from 'lucide-react';
 import type { Ride } from '../types';
 import { Button, Field, Modal, Stepper, cx, inputClass } from './ui/primitives';
-import { DEMO_USER } from '../data/demoUser';
 import { usd } from '../lib/rides';
 import SquishSwitch from './bits/SquishSwitch';
+import { useAuth } from '../context/AuthContext';
+import { publishLiveRide } from '../lib/ridesApi';
 
 interface PublishRideWizardModalProps {
   isOpen: boolean;
   onClose: () => void;
   onPublish: (ride: Ride) => void;
+  onOpenAuth?: () => void;
 }
 
 const SV_CITIES = [
@@ -38,20 +40,9 @@ const WEEK = [
 ];
 const FULL_DAY: Record<number, string> = { 0: 'Domingo', 1: 'Lunes', 2: 'Martes', 3: 'Miércoles', 4: 'Jueves', 5: 'Viernes', 6: 'Sábado' };
 
-const to12h = (hhmm: string) => {
-  const [h, m] = hhmm.split(':').map(Number);
-  const p = h >= 12 ? 'PM' : 'AM';
-  const h12 = h % 12 === 0 ? 12 : h % 12;
-  return `${String(h12).padStart(2, '0')}:${String(m).padStart(2, '0')} ${p}`;
-};
 const toMin = (hhmm: string) => {
   const [h, m] = hhmm.split(':').map(Number);
   return h * 60 + m;
-};
-const fmtDuration = (mins: number) => {
-  const h = Math.floor(mins / 60);
-  const m = mins % 60;
-  return h ? `${h}h${m ? ` ${String(m).padStart(2, '0')}m` : ''}` : `${m}m`;
 };
 
 /** Describe los días elegidos: rangos consecutivos como "Lunes a Viernes". */
@@ -64,7 +55,7 @@ export const describeDays = (days: number[]) => {
   return order.map((d) => FULL_DAY[d]).join(order.length === 2 ? ' y ' : ', ');
 };
 
-type Errors = Partial<Record<'originSpot' | 'destCity' | 'destSpot' | 'arrival' | 'days' | 'price' | 'car' | 'color' | 'plate', string>>;
+type Errors = Partial<Record<'originSpot' | 'destCity' | 'destSpot' | 'arrival' | 'days' | 'price' | 'car' | 'color' | 'plate' | 'general', string>>;
 
 const initial = {
   originCity: 'Santa Tecla',
@@ -86,7 +77,8 @@ const initial = {
   notes: '',
 };
 
-export const PublishRideWizardModal: React.FC<PublishRideWizardModalProps> = ({ isOpen, onClose, onPublish }) => {
+export const PublishRideWizardModal: React.FC<PublishRideWizardModalProps> = ({ isOpen, onClose, onPublish, onOpenAuth }) => {
+  const { user } = useAuth();
   const [step, setStep] = useState<1 | 2>(1);
   const [f, setF] = useState(initial);
   const [errors, setErrors] = useState<Errors>({});
@@ -104,7 +96,7 @@ export const PublishRideWizardModal: React.FC<PublishRideWizardModalProps> = ({ 
 
   const set = <K extends keyof typeof initial>(k: K, v: (typeof initial)[K]) => {
     setF((p) => ({ ...p, [k]: v }));
-    setErrors((e) => ({ ...e, [k]: undefined }));
+    setErrors((e) => ({ ...e, [k]: undefined, general: undefined }));
   };
 
   const validateStep1 = (): Errors => {
@@ -143,7 +135,7 @@ export const PublishRideWizardModal: React.FC<PublishRideWizardModalProps> = ({ 
     setStep(2);
   };
 
-  const publish = (ev: React.FormEvent) => {
+  const publish = async (ev: React.FormEvent) => {
     ev.preventDefault();
     const e = validateStep2();
     setErrors(e);
@@ -151,92 +143,55 @@ export const PublishRideWizardModal: React.FC<PublishRideWizardModalProps> = ({ 
       focusFirstError('publish-step2');
       return;
     }
+
+    if (!user) {
+      if (onOpenAuth) {
+        onClose();
+        onOpenAuth();
+      } else {
+        setErrors({ general: 'Debes iniciar sesión para publicar un viaje verídico en NAR.' });
+      }
+      return;
+    }
+
     setSubmitting(true);
 
     const price = Number(Number(f.price.replace(',', '.')).toFixed(2));
-    const stamp = Date.now();
     const [make, ...rest] = f.car.trim().split(/\s+/);
     const recurringDays = f.recurring ? describeDays(f.days) : undefined;
-    const dep = to12h(f.departure);
-    const arr = to12h(f.arrival);
 
-    const ride: Ride = {
-      id: `ride-pub-${stamp}`,
-      driver: {
-        id: DEMO_USER.id,
-        name: DEMO_USER.name,
-        role: 'Conductor',
-        affiliation: 'Perfil de demostración',
-        avatar: `data:image/svg+xml,${encodeURIComponent(
-          '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" fill="#1a1a1d"/><circle cx="32" cy="25" r="11" fill="#3a3a40"/><path d="M12 56c3-11 11-16 20-16s17 5 20 16" fill="#3a3a40"/></svg>'
-        )}`,
-        rating: 0,
-        totalTrips: 0,
-        verifiedDUI: false,
-        verifiedPhone: false,
-        phone: '',
-        memberSince: DEMO_USER.memberSince,
-      },
-      vehicle: {
-        make: make ?? '',
-        model: rest.join(' '),
-        year: 0,
-        type: 'Particular',
+    const res = await publishLiveRide(
+      {
+        originCity: f.originCity,
+        originSpot: f.originSpot.trim(),
+        stopCity: f.stopCity,
+        stopSpot: f.stopSpot.trim(),
+        destCity: f.destCity,
+        destSpot: f.destSpot.trim(),
+        departure: f.departure,
+        arrival: f.arrival,
+        seats: f.seats,
+        price,
+        carBrand: make || 'Vehículo',
+        carModel: rest.join(' ') || 'Sedán',
         plate: f.plate.trim().toUpperCase(),
         color: f.color.trim(),
-        image: '',
-        features: f.ac ? ['Aire acondicionado'] : [],
+        recurring: f.recurring,
+        recurringDays,
+        notes: f.notes.trim() || undefined,
+        hasAC: f.ac,
       },
-      origin: {
-        id: `wp-o-${stamp}`,
-        name: f.originSpot.trim(),
-        city: f.originCity,
-        time: dep,
-        type: 'origin',
-        address: `${f.originSpot.trim()}, ${f.originCity}`,
-      },
-      waypoints:
-        f.stopCity && f.stopSpot.trim()
-          ? [
-              {
-                id: `wp-s-${stamp}`,
-                name: f.stopSpot.trim(),
-                city: f.stopCity,
-                time: 'En ruta',
-                type: 'stop',
-                address: `${f.stopSpot.trim()}, ${f.stopCity}`,
-              },
-            ]
-          : [],
-      destination: {
-        id: `wp-d-${stamp}`,
-        name: f.destSpot.trim(),
-        city: f.destCity,
-        time: arr,
-        type: 'destination',
-        address: `${f.destSpot.trim()}, ${f.destCity}`,
-      },
-      date: 'Hoy',
-      departureTime: dep,
-      arrivalTime: arr,
-      estimatedDuration: fmtDuration(toMin(f.arrival) - toMin(f.departure)),
-      distanceKm: 0,
-      totalSeats: f.seats,
-      availableSeats: f.seats,
-      seatPrice: price,
-      gasContributionTotal: Number((price * f.seats).toFixed(2)),
-      status: 'scheduled',
-      amenities: f.ac ? ['Aire acondicionado'] : [],
-      notes: f.notes.trim() || undefined,
-      passengers: [],
-      isRecurring: f.recurring,
-      recurringDays,
-    };
+      user.id
+    );
 
-    window.setTimeout(() => {
-      onPublish(ride);
+    setSubmitting(false);
+
+    if (res.success && res.ride) {
+      onPublish(res.ride);
       setF(initial);
-    }, 450);
+    } else {
+      setErrors({ general: res.error || 'Error al guardar el viaje en Supabase.' });
+    }
   };
 
   const cityOptions = (exclude?: string) =>
@@ -280,6 +235,29 @@ export const PublishRideWizardModal: React.FC<PublishRideWizardModalProps> = ({ 
       <div className="h-1 rounded-full bg-white/10 overflow-hidden mb-6" aria-hidden="true">
         <div className="h-full bg-accent transition-[width] duration-300" style={{ width: step === 1 ? '50%' : '100%' }} />
       </div>
+
+      {!user && (
+        <div className="mb-6 p-3 rounded-xl bg-accent/10 border border-accent/20 flex items-center justify-between gap-3 text-xs text-white">
+          <span>Inicia sesión para vincular este viaje a tu perfil de conductor en Supabase.</span>
+          <button
+            type="button"
+            onClick={() => {
+              onClose();
+              onOpenAuth?.();
+            }}
+            className="underline font-bold text-accent cursor-pointer shrink-0"
+          >
+            Ingresar
+          </button>
+        </div>
+      )}
+
+      {errors.general && (
+        <div className="mb-6 p-3 rounded-xl bg-danger/10 border border-danger/30 flex items-center gap-2 text-xs text-danger">
+          <AlertCircle className="w-4 h-4 shrink-0" />
+          <span>{errors.general}</span>
+        </div>
+      )}
 
       {step === 1 ? (
         <form id="publish-step1" onSubmit={next} noValidate className="flex flex-col gap-6">
@@ -349,24 +327,44 @@ export const PublishRideWizardModal: React.FC<PublishRideWizardModalProps> = ({ 
             <legend className="text-[14px] mb-3">¿Cuándo sales?</legend>
             <div className="grid grid-cols-2 gap-2" role="radiogroup">
               {[
-                { v: false, l: 'Solo hoy' },
-                { v: true, l: 'Se repite cada semana' },
-              ].map((o) => (
-                <label
-                  key={String(o.v)}
-                  className={cx(
-                    'h-12 px-4 rounded-[12px] border flex items-center gap-3 cursor-pointer text-[15px]',
-                    f.recurring === o.v ? 'border-accent bg-accent-soft' : 'border-line-strong hover:border-white/20'
-                  )}
-                >
-                  <input type="radio" name="recurring" checked={f.recurring === o.v} onChange={() => set('recurring', o.v)} className="accent-[#21d2ed]" />
-                  {o.l}
-                </label>
-              ))}
+                { r: false, title: 'Solo un viaje', desc: 'Para este día específico' },
+                { r: true, title: 'Ruta diaria recurrente', desc: 'Repetir cada semana' },
+              ].map((opt) => {
+                const on = f.recurring === opt.r;
+                return (
+                  <button
+                    key={String(opt.r)}
+                    type="button"
+                    role="radio"
+                    aria-checked={on}
+                    onClick={() => set('recurring', opt.r)}
+                    className={cx(
+                      'p-4 rounded-[12px] border text-left transition-colors flex flex-col justify-between gap-2',
+                      on ? 'border-accent bg-accent/5' : 'border-line hover:border-line-strong'
+                    )}
+                  >
+                    <span className="flex items-center justify-between w-full">
+                      <span className="text-[15px]">{opt.title}</span>
+                      <span
+                        className={cx(
+                          'w-4 h-4 rounded-full border flex items-center justify-center transition-colors',
+                          on ? 'border-accent bg-accent' : 'border-line-strong'
+                        )}
+                        aria-hidden="true"
+                      >
+                        {on ? <Check className="w-2.5 h-2.5 text-ink stroke-[3]" /> : null}
+                      </span>
+                    </span>
+                    <span className="t-small text-muted">{opt.desc}</span>
+                  </button>
+                );
+              })}
             </div>
+
             {f.recurring ? (
-              <div className="flex flex-col gap-2">
-                <div className="flex flex-wrap gap-2" aria-label="Días de la semana">
+              <div className="flex flex-col gap-2 pt-2">
+                <p className="t-small text-muted">Días que haces este viaje</p>
+                <div className="flex flex-wrap gap-1.5" role="group" aria-label="Días recurrentes">
                   {WEEK.map((w) => {
                     const on = f.days.includes(w.d);
                     return (
@@ -458,35 +456,27 @@ export const PublishRideWizardModal: React.FC<PublishRideWizardModalProps> = ({ 
             />
           </div>
 
-          <Field label="Nota para los pasajeros" optional>
+          <Field label="Indicaciones para los pasajeros" optional hint="Dónde esperar, equipaje permitido o detalles para encontrarse rápido.">
             {(a) => (
               <textarea
                 {...a}
-                rows={3}
+                rows={2}
                 value={f.notes}
-                onChange={(e) => set('notes', e.target.value.slice(0, 200))}
-                className={cx(inputClass(), 'h-auto py-3 resize-none')}
-                placeholder="Ej. Salgo en punto. Solo equipaje de mano."
+                onChange={(e) => set('notes', e.target.value)}
+                className={inputClass()}
+                placeholder="Ej. Salgo puntual, espero 5 minutos. Baúl mediano disponible."
               />
             )}
           </Field>
 
-          <div className="surface-inset p-4 flex flex-col gap-2 t-small">
-            <p className="text-[14px] text-fg flex items-center gap-2">
-              <Check className="w-4 h-4 text-accent" aria-hidden="true" /> Resumen
-            </p>
-            <p className="text-muted">
-              {f.originCity} ({f.originSpot}) → {f.destCity} ({f.destSpot})
-            </p>
-            <p className="text-muted tabular">
-              Salida {to12h(f.departure)} · llegada {to12h(f.arrival)} · {f.recurring ? describeDays(f.days) : 'Solo hoy'}
-            </p>
-            <p className="text-muted tabular">
-              {f.seats} {f.seats === 1 ? 'asiento' : 'asientos'} · {usd(Number(f.price.replace(',', '.')) || 0)} por asiento
-            </p>
-            <p className="text-subtle mt-1">
-              Se publicará con tu perfil de demostración, marcado como “DUI sin verificar”.
-            </p>
+          <div className="p-4 rounded-[12px] bg-white/[0.03] border border-line flex items-center justify-between">
+            <div>
+              <p className="t-small text-muted">Aporte total estimado</p>
+              <p className="text-[14px]">
+                {f.seats} {f.seats === 1 ? 'asiento' : 'asientos'} × {usd(Number(f.price) || 0)}
+              </p>
+            </div>
+            <p className="t-h3 tabular text-accent">{usd(f.seats * (Number(f.price) || 0))}</p>
           </div>
         </form>
       )}

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Check, Copy, MessageSquare, Navigation } from 'lucide-react';
+import { Check, Copy, MessageSquare, Navigation, QrCode } from 'lucide-react';
+import { QRCodeSVG } from 'qrcode.react';
 import type { Booking, Ride } from '../types';
 import { Button, Modal, ShaderBars } from './ui/primitives';
 import { clock24, usd } from '../lib/rides';
@@ -77,23 +78,37 @@ export const BoardingPassModal: React.FC<BoardingPassModalProps> = ({ booking, o
           <span className="absolute -right-3 -top-3 w-6 h-6 rounded-full bg-bg border border-line" aria-hidden="true" />
         </div>
 
-        <div className="p-5 flex flex-col items-center text-center gap-2">
-          <p className="t-tag text-accent">PIN de abordaje</p>
-          <p className="text-[56px] leading-none tracking-[0.12em] tabular">
-            <span className="sr-only">PIN {booking.securityPin.split('').join(' ')}</span>
-            <span aria-hidden="true">
-              <DecryptedText
-                text={booking.securityPin}
-                animateOn="view"
-                sequential
-                revealDirection="start"
-                speed={45}
-                characters="0123456789"
-                encryptedClassName="text-accent"
-              />
-            </span>
+        <div className="p-5 flex flex-col items-center text-center gap-3">
+          {/* Código QR Verídico */}
+          <div className="p-3 bg-white rounded-2xl shadow-xl flex flex-col items-center justify-center">
+            <QRCodeSVG
+              value={`https://nar.app/verify/${booking.id}?pin=${booking.securityPin.replace('-', '')}`}
+              size={135}
+              level="M"
+              includeMargin={false}
+            />
+          </div>
+
+          <div className="mt-1">
+            <p className="t-tag text-accent">PIN DE ABORDAJE</p>
+            <p className="text-[44px] font-bold leading-none tracking-[0.14em] tabular mt-1 text-white">
+              <span className="sr-only">PIN {booking.securityPin.split('').join(' ')}</span>
+              <span aria-hidden="true">
+                <DecryptedText
+                  text={booking.securityPin}
+                  animateOn="view"
+                  sequential
+                  revealDirection="start"
+                  speed={45}
+                  characters="0123456789"
+                  encryptedClassName="text-accent"
+                />
+              </span>
+            </p>
+          </div>
+          <p className="t-small text-muted max-w-[320px]">
+            Muestra este código QR o tu PIN al conductor antes de abordar para verificar tu asiento.
           </p>
-          <p className="t-small text-muted max-w-[320px]">Muéstralo al conductor al subir. Él lo confirma en su lista de pasajeros.</p>
         </div>
 
         <dl className="grid grid-cols-2 gap-px bg-line border-t border-line">

@@ -12,6 +12,9 @@ import { clock24, corridorsFrom } from './lib/rides';
 import { hashFor, viewFromHash, type ViewType } from './lib/nav';
 import SwipeToast from './components/bits/SwipeToast';
 import LatticeLoader from './components/bits/LatticeLoader';
+import { useAuth } from './context/AuthContext';
+import { supabase } from './lib/supabase';
+import { getLiveRides, bookLiveRide } from './lib/ridesApi';
 
 const SearchView = lazy(() => import('./components/SearchView').then((m) => ({ default: m.SearchView })));
 const CorridorsView = lazy(() => import('./components/CorridorsView').then((m) => ({ default: m.CorridorsView })));
@@ -48,6 +51,7 @@ function loadState(): Persisted {
 const EMPTY_QUERY: SearchQuery = { origin: '', destination: '', day: 'today', seats: 1 };
 
 export function App() {
+  const { user } = useAuth();
   const [{ rides, bookings }, setStore] = useState<Persisted>(loadState);
   const [view, setView] = useState<ViewType>(() => viewFromHash(window.location.hash));
   const [query, setQuery] = useState<SearchQuery>(EMPTY_QUERY);
@@ -59,6 +63,46 @@ export function App() {
   const [tripRideId, setTripRideId] = useState<string | null>(null);
   const [authOpen, setAuthOpen] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+
+  // Sincronizar viajes en vivo desde Supabase al cargar la app
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadSupabaseRides = async () => {
+      const live = await getLiveRides();
+      if (isMounted && live.length > 0) {
+        setStore((prev) => ({
+          ...prev,
+          rides: live,
+        }));
+      }
+    };
+
+    loadSupabaseRides();
+
+    // Suscripción Realtime a cambios en la tabla 'rides'
+    const channel = supabase
+      .channel('realtime:rides')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'rides' },
+        async () => {
+          const updated = await getLiveRides();
+          if (isMounted && updated.length > 0) {
+            setStore((prev) => ({
+              ...prev,
+              rides: updated,
+            }));
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      isMounted = false;
+      supabase.removeChannel(channel);
+    };
+  }, []);
 
   useEffect(() => {
     try {
@@ -117,9 +161,29 @@ export function App() {
     navigate('telemetry');
   };
 
-  const confirmBooking = (rideId: string, seats: number, pickupPoint: string, passengerName: string) => {
+  const confirmBooking = async (rideId: string, seats: number, pickupPoint: string, passengerName: string) => {
     const target = rideById(rideId);
     if (!target || target.availableSeats < seats) return;
+
+    // Si el usuario está autenticado y el viaje es de Supabase (UUID)
+    if (user && target.id.includes('-') && target.id.length > 20) {
+      const res = await bookLiveRide(rideId, seats, pickupPoint, user.id, passengerName, target.seatPrice);
+      if (res.success && res.booking) {
+        setStore((s) => ({
+          rides: s.rides.map((r) =>
+            r.id === rideId ? { ...r, availableSeats: Math.max(0, r.availableSeats - seats) } : r
+          ),
+          bookings: [...s.bookings, res.booking!],
+        }));
+        setSelectedRideId(null);
+        setPassBookingId(res.booking.id);
+        setTripRideId(res.booking.ride.id);
+        setToast(`¡Reserva confirmada en Supabase! ${target.origin.city} → ${target.destination.city}.`);
+        return;
+      }
+    }
+
+    // Flujo normal / demo
     const updated: Ride = {
       ...target,
       availableSeats: target.availableSeats - seats,
@@ -157,11 +221,11 @@ export function App() {
   };
 
   const publishRide = (ride: Ride) => {
-    setStore((s) => ({ ...s, rides: [ride, ...s.rides] }));
+    setStore((s) => ({ ...s, rides: [ride, ...s.rides.filter((r) => r.id !== ride.id)] }));
     setPublishOpen(false);
     setQuery({ origin: ride.origin.city, destination: ride.destination.city, day: 'any', seats: 1 });
     navigate('search');
-    setToast(`Publicaste ${ride.origin.city} → ${ride.destination.city} a las ${clock24(ride.departureTime)}.`);
+    setToast(`¡Viaje publicado en Supabase! ${ride.origin.city} → ${ride.destination.city} a las ${clock24(ride.departureTime)}.`);
   };
 
   const resetDemo = () => {
@@ -225,48 +289,42 @@ export function App() {
         <ProfileView
           rides={rides}
           bookings={freshBookings}
-          onOpenPublish={() => setPublishOpen(true)}
-          onOpenAuth={() => setAuthOpen(true)}
-          onSearch={() => navigate('search')}
+          onSelectRide={(r) => setSelectedRideId(r.id)}
           onOpenPass={(b) => setPassBookingId(b.id)}
-          onOpenTrip={openTrip}
-          onOpenChat={(r) => setChatRideId(r.id)}
-          onViewRide={(r) => setSelectedRideId(r.id)}
+          onOpenPublish={() => setPublishOpen(true)}
+          onOpenTrip={(r) => {
+            setTripRideId(r.id);
+            navigate('telemetry');
+          }}
           onResetDemo={resetDemo}
         />
       );
       break;
+    case 'explore':
     default:
       content = (
         <HomeView
           rides={rides}
-          corridors={corridors}
           places={places}
-          query={query}
-          onQueryChange={setQuery}
+          onSelectRide={(r) => setSelectedRideId(r.id)}
           onSearch={(q) => {
             setQuery(q);
             navigate('search');
           }}
-          onSelectRide={(r) => setSelectedRideId(r.id)}
-          onOpenPublish={() => setPublishOpen(true)}
           onSelectCorridor={searchCorridor}
-          onBrowseAll={() => navigate('search')}
-          activeBooking={latestBookingFresh}
-          onOpenPass={() => latestBooking && setPassBookingId(latestBooking.id)}
-          onTrackBooking={() => latestBookingFresh && openTrip(latestBookingFresh.ride)}
+          onOpenPublish={() => setPublishOpen(true)}
+          onNavigate={navigate}
         />
       );
+      break;
   }
 
   return (
-    <div className="relative min-h-dvh flex flex-col">
-      <AmbientBackground view={view} />
-      <a
-        href="#main"
-        className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-[200] focus:px-4 focus:py-2 focus:rounded-[10px] focus:bg-white focus:text-ink"
-      >
-        Saltar al contenido
+    <div className="relative min-h-screen bg-bg text-fg flex flex-col font-sans selection:bg-accent/25 selection:text-white">
+      <AmbientBackground />
+
+      <a href="#main" className="skip-link">
+        Saltar al contenido principal
       </a>
 
       <Navbar
@@ -319,7 +377,14 @@ export function App() {
             }}
           />
         ) : null}
-        {publishOpen ? <PublishRideWizardModal isOpen onClose={() => setPublishOpen(false)} onPublish={publishRide} /> : null}
+        {publishOpen ? (
+          <PublishRideWizardModal
+            isOpen
+            onClose={() => setPublishOpen(false)}
+            onPublish={publishRide}
+            onOpenAuth={() => setAuthOpen(true)}
+          />
+        ) : null}
         {passBooking ? (
           <BoardingPassModal
             booking={{ ...passBooking, ride: rideById(passBooking.ride.id) ?? passBooking.ride }}
