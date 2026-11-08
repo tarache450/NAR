@@ -305,7 +305,10 @@ export function App() {
       content = (
         <HomeView
           rides={rides}
+          corridors={corridors}
           places={places}
+          query={query}
+          onQueryChange={setQuery}
           onSelectRide={(r) => setSelectedRideId(r.id)}
           onSearch={(q) => {
             setQuery(q);
@@ -313,7 +316,10 @@ export function App() {
           }}
           onSelectCorridor={searchCorridor}
           onOpenPublish={() => setPublishOpen(true)}
-          onNavigate={navigate}
+          onBrowseAll={() => navigate('search')}
+          activeBooking={latestBooking}
+          onOpenPass={() => latestBooking && setPassBookingId(latestBooking.id)}
+          onTrackBooking={() => latestBooking && openTrip(latestBooking.ride)}
         />
       );
       break;

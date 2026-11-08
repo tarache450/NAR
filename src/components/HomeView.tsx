@@ -100,9 +100,10 @@ export const HomeView: React.FC<HomeViewProps> = (p) => {
 
 /* ── Hero ───────────────────────────────────────────────────────────────── */
 
-const Hero: React.FC<HomeViewProps> = ({ query, onQueryChange, onSearch, places, onOpenPublish, rides, corridors }) => {
+const Hero: React.FC<HomeViewProps> = ({ query, onQueryChange, onSearch, places, onOpenPublish, rides = [], corridors = [] }) => {
   const free = rides.reduce((n, r) => n + Math.max(0, r.availableSeats), 0);
-  const destinations = useMemo(() => [...new Set(corridors.map((c) => c.destination))], [corridors]);
+  const safeCorridors = corridors || [];
+  const destinations = useMemo(() => [...new Set(safeCorridors.map((c) => c.destination))], [safeCorridors]);
   const rich = useRichEffects();
   return (
     <section className="relative overflow-hidden pt-[104px] md:pt-[148px] pb-[140px] md:pb-[220px]" aria-labelledby="hero-title">
