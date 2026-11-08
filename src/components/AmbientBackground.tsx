@@ -18,7 +18,7 @@ const LAYOUTS: Record<ViewType, [Point, Point, Point]> = {
   profile: [['50%', '0%'], ['92%', '62%'], ['6%', '74%']],
 };
 
-export const AmbientBackground: React.FC<{ view: ViewType }> = ({ view }) => {
+export const AmbientBackground: React.FC<{ view?: ViewType }> = ({ view = 'explore' }) => {
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -42,7 +42,7 @@ export const AmbientBackground: React.FC<{ view: ViewType }> = ({ view }) => {
     };
   }, []);
 
-  const [a, b, c] = LAYOUTS[view];
+  const [a, b, c] = LAYOUTS[view] || LAYOUTS.explore;
 
   return (
     <div ref={ref} aria-hidden="true" className="ambient">

@@ -321,7 +321,7 @@ export function App() {
 
   return (
     <div className="relative min-h-screen bg-bg text-fg flex flex-col font-sans selection:bg-accent/25 selection:text-white">
-      <AmbientBackground />
+      <AmbientBackground view={view} />
 
       <a href="#main" className="skip-link">
         Saltar al contenido principal
