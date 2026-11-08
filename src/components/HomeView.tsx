@@ -167,9 +167,9 @@ const Hero: React.FC<HomeViewProps> = ({ query, onQueryChange, onSearch, places,
             <SearchPanel value={query} onChange={onQueryChange} onSubmit={onSearch} places={places} submitLabel="Buscar viaje" highlight />
           </ClickSpark>
           <p className="mt-5 t-small text-muted">
-            ¿Vas en carro por una de estas rutas?{' '}
-            <button type="button" onClick={onOpenPublish} className="text-fg underline underline-offset-4 decoration-white/30 hover:decoration-white">
-              Publica tus asientos libres
+            ¿Manejas en una de estas rutas?{' '}
+            <button type="button" onClick={onOpenPublish} className="text-fg underline underline-offset-4 decoration-white/30 hover:decoration-white cursor-pointer">
+              Únete a la red de conductores verificados
             </button>
           </p>
         </Reveal>
@@ -318,7 +318,7 @@ const TodaySection: React.FC<{
                   <Button variant="outline" onClick={() => setSlot('all')}>
                     Ver todo el día
                   </Button>
-                  <Button onClick={onOpenPublish}>Publicar viaje</Button>
+                  <Button onClick={onOpenPublish}>Registrarme como conductor</Button>
                 </>
               }
             />
@@ -464,7 +464,7 @@ const AudienceSection: React.FC<{ onSearch: () => void; onOpenPublish: () => voi
         'Fijas el aporte por asiento en USD',
         'Confirmas a cada pasajero con su PIN al abordar',
       ],
-      cta: { label: 'Publicar mis asientos', action: onOpenPublish },
+      cta: { label: 'Crear perfil de conductor', action: onOpenPublish },
     },
     {
       id: 'rutina',
@@ -921,7 +921,7 @@ const ClosingCta: React.FC<{ onBrowseAll: () => void; onOpenPublish: () => void 
               </Magnet>
               <Magnet padding={60} magnetStrength={4} maxOffset={10}>
                 <Button size="lg" variant="outline" onClick={onOpenPublish}>
-                  Publicar viaje
+                  Crear cuenta / Ingresar
                 </Button>
               </Magnet>
             </div>

@@ -30,27 +30,22 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onOpenPublish, onSel
           <ul className="flex flex-col gap-3">
             <li>
               <button type="button" className={linkCls} onClick={() => onNavigate('search')}>
-                Buscar viaje
-              </button>
-            </li>
-            <li>
-              <button type="button" className={linkCls} onClick={onOpenPublish}>
-                Publicar viaje
+                Rutas y viajes
               </button>
             </li>
             <li>
               <button type="button" className={linkCls} onClick={() => onNavigate('corridors')}>
-                Corredores
+                Corredores en El Salvador
               </button>
             </li>
             <li>
-              <button type="button" className={linkCls} onClick={() => onNavigate('telemetry')}>
-                Mi viaje
+              <button type="button" className={linkCls} onClick={onOpenPublish}>
+                Registrarse como Conductor
               </button>
             </li>
             <li>
               <button type="button" className={linkCls} onClick={() => onNavigate('profile')}>
-                Perfil
+                Mi Perfil
               </button>
             </li>
           </ul>

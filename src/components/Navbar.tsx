@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Logo } from './Logo';
 import { Button, cx } from './ui/primitives';
 import { NAV_LABELS, type ViewType } from '../lib/nav';
-import { Plus, LogIn, User as UserIcon } from 'lucide-react';
+import { LogIn, User as UserIcon, Smartphone } from 'lucide-react';
 import GooeyNav from './bits/GooeyNav';
 import { hashFor } from '../lib/nav';
 import { useAuth } from '../context/AuthContext';
@@ -10,19 +10,15 @@ import { useAuth } from '../context/AuthContext';
 interface NavbarProps {
   activeView: ViewType;
   onNavigate: (view: ViewType) => void;
-  onOpenPublish: () => void;
   onOpenAuth: () => void;
-  activeTripCount: number;
 }
 
-const CENTER: ViewType[] = ['explore', 'search', 'corridors', 'telemetry', 'profile'];
+const CENTER: ViewType[] = ['explore', 'search', 'corridors', 'profile'];
 
 export const Navbar: React.FC<NavbarProps> = ({ 
   activeView, 
   onNavigate, 
-  onOpenPublish, 
   onOpenAuth, 
-  activeTripCount 
 }) => {
   const [scrolled, setScrolled] = useState(false);
   const { user, profile } = useAuth();
@@ -57,7 +53,7 @@ export const Navbar: React.FC<NavbarProps> = ({
         <div className="hidden lg:block">
           <GooeyNav
             items={CENTER.map((v) => ({
-              label: v === 'telemetry' && activeTripCount > 0 ? `${NAV_LABELS[v]} · ${activeTripCount}` : NAV_LABELS[v],
+              label: NAV_LABELS[v] || v,
               href: hashFor(v),
             }))}
             activeIndex={Math.max(0, CENTER.indexOf(activeView))}
@@ -73,19 +69,6 @@ export const Navbar: React.FC<NavbarProps> = ({
         </div>
 
         <div className="flex items-center gap-2 sm:gap-3">
-          {/* Botón de Publicar Viaje */}
-          <span className="hidden sm:block">
-            <Button variant="outline" size="md" onClick={onOpenPublish}>
-              Publicar viaje
-            </Button>
-          </span>
-          <span className="sm:hidden">
-            <Button variant="outline" size="sm" onClick={onOpenPublish}>
-              <Plus className="w-4 h-4" aria-hidden="true" />
-              Publicar
-            </Button>
-          </span>
-
           {/* Autenticación Real de Supabase */}
           {user ? (
             <button
